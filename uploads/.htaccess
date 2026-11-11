@@ -1,0 +1,23 @@
+# ==============================================================================
+# CampusFix - Upload Directory Security Hardening
+# ==============================================================================
+# Prevent script execution in uploads directory
+<FilesMatch "(?i)\.(php|phtml|php3|php4|php5|php7|php8|phps|pht|phar|inc|cgi|pl|py|sh|bat|exe|cmd|dll|jsp|asp|aspx)$">
+    Order Deny,Allow
+    Deny from all
+</FilesMatch>
+
+# Disable PHP engine if Apache PHP module is loaded
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php8.c>
+    php_flag engine off
+</IfModule>
+
+# Prevent directory indexing
+Options -Indexes -ExecCGI
+

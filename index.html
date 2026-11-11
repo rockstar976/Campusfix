@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="CampusFix — Next-Generation Campus Issue Reporting & Resolution Platform. Report it. Track it. Fix it.">
+    <title>CampusFix — Report it. Track it. Fix it.</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+
+<body>
+
+    <!-- Navigation -->
+    <nav class="navbar" role="navigation" aria-label="Main Navigation">
+        <a href="index.html" class="navbar-brand">
+            <div class="logo-icon"><i class="fa-solid fa-wrench"></i></div>
+            CampusFix
+        </a>
+        <button class="menu-toggle" onclick="toggleMobileMenu()" aria-label="Toggle navigation menu">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+        <ul class="navbar-links" id="navLinks">
+            <li><a href="#features">Features</a></li>
+            <li><a href="#how-it-works">How It Works</a></li>
+            <li><a href="#departments">Departments</a></li>
+            <li><a href="#security">Security</a></li>
+        </ul>
+        <div class="navbar-actions" id="navActions">
+            <a href="pages/login.html" class="btn btn-secondary btn-sm">Login</a>
+            <a href="pages/register.html" class="btn btn-primary btn-sm">Sign Up</a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+
+        <!-- 3D Interactive Hero Canvas & Content -->
+        <div class="hero-wrapper">
+            <canvas id="hero3dCanvas" class="hero-3d-canvas" aria-hidden="true"></canvas>
+
+            <section class="hero">
+                <div class="hero-badge">
+                    <span class="badge-pulse" aria-hidden="true"></span>
+                    <span>Official Campus Issue Resolution Platform</span>
+                </div>
+
+                <h1>
+                    Campus Issues?<br>
+                    <span class="gradient-text">Report. Track. Fix.</span>
+                </h1>
+
+                <p class="tagline">
+                    Empowering students, faculty, and maintenance staff with real-time tracking,
+                    cryptographic photo evidence, and automated departmental routing.
+                </p>
+
+                <div class="hero-actions">
+                    <a href="pages/register.html" class="btn btn-primary btn-lg">
+                        <i class="fa-solid fa-rocket"></i> Get Started Free
+                    </a>
+                    <a href="#features" class="btn btn-secondary btn-lg">
+                        <i class="fa-solid fa-play"></i> Explore Platform
+                    </a>
+                </div>
+
+                <!-- Interactive 3D Glassmorphic Live Simulation Card -->
+                <div class="hero-simulation-wrapper">
+                    <div class="hero-sim-card">
+                        <div class="sim-card-header">
+                            <span class="sim-badge sim-badge-urgent"><i class="fa-solid fa-bolt"></i> High
+                                Priority</span>
+                            <span class="sim-id">CF-2026-0142</span>
+                        </div>
+                        <h3 class="sim-title">Water Cooler Leakage &amp; Broken Filter</h3>
+                        <div class="sim-meta">
+                            <span><i class="fa-solid fa-location-dot"></i> Science Block B &bull; Floor 2 &bull; Lab
+                                204</span>
+                        </div>
+                        <div class="sim-progress-bar">
+                            <div class="sim-step completed">
+                                <div class="dot"><i class="fa-solid fa-check"></i></div>
+                                <span>Reported</span>
+                            </div>
+                            <div class="sim-step completed">
+                                <div class="dot"><i class="fa-solid fa-check"></i></div>
+                                <span>Assigned</span>
+                            </div>
+                            <div class="sim-step active">
+                                <div class="dot"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                                <span>In Progress</span>
+                            </div>
+                            <div class="sim-step">
+                                <div class="dot"></div>
+                                <span>Resolved</span>
+                            </div>
+                        </div>
+                        <div class="sim-card-footer">
+                            <div class="sim-actions">
+                                <button class="btn-sim-upvote" id="simUpvoteBtn" onclick="toggleSimUpvote(event)">
+                                    <i class="fa-solid fa-thumbs-up"></i>
+                                    <span>Upvote</span>
+                                    <span class="upvote-count" id="simUpvoteCount">42</span>
+                                </button>
+                                <button class="btn-sim-status" onclick="cycleSimStatus(event)">
+                                    <i class="fa-solid fa-forward-step"></i> Simulate Status
+                                </button>
+                            </div>
+                            <div class="sim-verified-tag">
+                                <i class="fa-solid fa-shield-halved"></i> Photo Evidence Attached
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Metrics Ticker -->
+                <div class="hero-stats-ticker">
+                    <div class="ticker-item">
+                        <div class="ticker-value">1,250+</div>
+                        <div class="ticker-label">Campus Issues Resolved</div>
+                    </div>
+                    <div class="ticker-divider" aria-hidden="true"></div>
+                    <div class="ticker-item">
+                        <div class="ticker-value">&lt; 24h</div>
+                        <div class="ticker-label">Average Response Time</div>
+                    </div>
+                    <div class="ticker-divider" aria-hidden="true"></div>
+                    <div class="ticker-item">
+                        <div class="ticker-value">98.6%</div>
+                        <div class="ticker-label">Resolution Satisfaction</div>
+                    </div>
+                    <div class="ticker-divider" aria-hidden="true"></div>
+                    <div class="ticker-item">
+                        <div class="ticker-value">100%</div>
+                        <div class="ticker-label">Audit Transparency</div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+        <!-- Campus Departments Showcase -->
+        <section class="departments-section container" id="departments">
+            <h2 style="text-align:center; font-size:2rem; margin-bottom:0.5rem;">Connected Campus Departments</h2>
+            <p style="text-align:center; color:var(--color-text-secondary); max-width:600px; margin:0 auto 2rem;">
+                Complaints are automatically classified and dispatched directly to specialized maintenance teams.
+            </p>
+            <div class="departments-grid">
+                <div class="dept-card">
+                    <div class="dept-icon" style="background: rgba(245, 158, 11, 0.15); color: var(--color-warning);">
+                        <i class="fa-solid fa-bolt"></i>
+                    </div>
+                    <h4>Electrical &amp; Power</h4>
+                    <p>Lighting, wiring, generators, switches</p>
+                </div>
+
+                <div class="dept-card">
+                    <div class="dept-icon" style="background: rgba(71, 85, 105, 0.12); color: var(--color-info);">
+                        <i class="fa-solid fa-faucet-drip"></i>
+                    </div>
+                    <h4>Plumbing &amp; Water</h4>
+                    <p>Coolers, restrooms, pipelines, drainage</p>
+                </div>
+
+                <div class="dept-card">
+                    <div class="dept-icon" style="background: var(--color-accent-glow); color: var(--color-accent);">
+                        <i class="fa-solid fa-network-wired"></i>
+                    </div>
+                    <h4>IT &amp; Campus Wi-Fi</h4>
+                    <p>Routers, projectors, lab terminals, audio</p>
+                </div>
+
+                <div class="dept-card">
+                    <div class="dept-icon" style="background: rgba(168, 85, 247, 0.15); color: var(--color-purple);">
+                        <i class="fa-solid fa-bed"></i>
+                    </div>
+                    <h4>Hostel &amp; Mess</h4>
+                    <p>Rooms, furniture, hygiene, catering</p>
+                </div>
+
+                <div class="dept-card">
+                    <div class="dept-icon" style="background: rgba(34, 197, 94, 0.15); color: var(--color-success);">
+                        <i class="fa-solid fa-building"></i>
+                    </div>
+                    <h4>Civil Infrastructure</h4>
+                    <p>Doors, windows, masonry, painting</p>
+                </div>
+
+                <div class="dept-card">
+                    <div class="dept-icon" style="background: rgba(239, 68, 68, 0.15); color: var(--color-danger);">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <h4>Safety &amp; Sanitation</h4>
+                    <p>Waste management, alarms, accessibility</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section class="features-section container" id="features">
+            <h2 style="text-align:center; font-size:2rem; margin-bottom:0.5rem;">Engineered for Accountability</h2>
+            <p style="text-align:center; color:var(--color-text-secondary); max-width:600px; margin:0 auto 3rem;">
+                Built on open-source standards to deliver institutional-grade transparency and reliability.
+            </p>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fa-solid fa-clipboard-list"></i>
+                    </div>
+                    <h3>Frictionless Reporting</h3>
+                    <p>Report campus issues with title, department, exact room/floor location, priority, and photo proof
+                        in under 60 seconds.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: var(--color-purple-glow); color: var(--color-purple);">
+                        <i class="fa-solid fa-timeline"></i>
+                    </div>
+                    <h3>Immutable Event Timeline</h3>
+                    <p>Every ticket generates a verifiable audit log tracking every handoff from Pending &rarr; Assigned
+                        &rarr; In Progress &rarr; Resolved.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: rgba(34,197,94,0.15); color: var(--color-success);">
+                        <i class="fa-solid fa-chart-pie"></i>
+                    </div>
+                    <h3>Actionable Backlog Analytics</h3>
+                    <p>Administrators receive real-time visibility into departmental backlogs, repeat issue locations,
+                        and resolution times.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: rgba(239,68,68,0.15); color: var(--color-danger);">
+                        <i class="fa-solid fa-user-shield"></i>
+                    </div>
+                    <h3>Granular Role-Based Access</h3>
+                    <p>Tiered permissions for Students, Maintenance Staff, Department Heads, and Institute Super
+                        Administrators.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: rgba(245,158,11,0.15); color: var(--color-warning);">
+                        <i class="fa-solid fa-thumbs-up"></i>
+                    </div>
+                    <h3>Community Upvoting</h3>
+                    <p>Students can upvote active issues to highlight widespread problems, avoiding duplicate
+                        submissions.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background: rgba(71, 85, 105, 0.12); color: var(--color-info);">
+                        <i class="fa-solid fa-mobile-screen-button"></i>
+                    </div>
+                    <h3>Responsive &amp; Accessible</h3>
+                    <p>Fully compliant with WCAG 2.2 AA accessibility guidelines with a clean, Polish-inspired
+                        high-contrast theme for all devices.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- How It Works -->
+        <section class="container" id="how-it-works" style="padding: 4rem 1.5rem;">
+            <h2 style="text-align:center; font-size:2rem; margin-bottom:0.5rem;">How It Works</h2>
+            <p style="text-align:center; color:var(--color-text-secondary); max-width:550px; margin:0 auto 3rem;">
+                A transparent, closed-loop resolution process from submission to student sign-off.
+            </p>
+            <div
+                style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); gap:2rem; text-align:center;">
+                <div>
+                    <div
+                        style="width:64px;height:64px;margin:0 auto 1rem;border-radius:50%;background:var(--color-accent-glow);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:800;color:var(--color-accent);">
+                        1</div>
+                    <h3 style="margin-bottom:0.5rem;">1. Report</h3>
+                    <p style="color:var(--color-text-secondary);font-size:0.88rem;">Select category, specify building
+                        and room, attach optional photo evidence, and submit.</p>
+                </div>
+                <div>
+                    <div
+                        style="width:64px;height:64px;margin:0 auto 1rem;border-radius:50%;background:var(--color-purple-glow);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:800;color:var(--color-purple);">
+                        2</div>
+                    <h3 style="margin-bottom:0.5rem;">2. Assign &amp; Track</h3>
+                    <p style="color:var(--color-text-secondary);font-size:0.88rem;">The ticket routes to the appropriate
+                        department. Watch real-time timeline updates on your dashboard.</p>
+                </div>
+                <div>
+                    <div
+                        style="width:64px;height:64px;margin:0 auto 1rem;border-radius:50%;background:rgba(34,197,94,0.15);display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:800;color:var(--color-success);">
+                        3</div>
+                    <h3 style="margin-bottom:0.5rem;">3. Resolve &amp; Rate</h3>
+                    <p style="color:var(--color-text-secondary);font-size:0.88rem;">Staff completes the repair and
+                        provides proof. You receive a notification and rate the resolution quality.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Institutional Security & Trust Banner -->
+        <section class="container" id="security">
+            <div class="security-banner">
+                <h3 style="font-size:1.6rem; margin-bottom:0.5rem;">Enterprise Institutional Security Standards</h3>
+                <p style="color:var(--color-text-secondary); max-width:640px; margin:0 auto 1.5rem;">
+                    Engineered with multi-layered defenses to safeguard student privacy and campus data integrity.
+                </p>
+                <div class="security-grid">
+                    <div class="security-item">
+                        <i class="fa-solid fa-lock" aria-hidden="true"></i>
+                        <div>
+                            <h4>Strict Injection Defenses</h4>
+                            <p>All database transactions utilize PDO prepared statements with strict emulation disabled,
+                                preventing SQL injection.</p>
+                        </div>
+                    </div>
+                    <div class="security-item">
+                        <i class="fa-solid fa-fingerprint" aria-hidden="true"></i>
+                        <div>
+                            <h4>Bcrypt Password Hashing</h4>
+                            <p>Credentials protected with adaptive cost-factored Bcrypt hashes. No plaintext passwords
+                                or weak MD5/SHA1 hashing.</p>
+                        </div>
+                    </div>
+                    <div class="security-item">
+                        <i class="fa-solid fa-file-shield" aria-hidden="true"></i>
+                        <div>
+                            <h4>Hardened File Uploads</h4>
+                            <p>Uploaded images undergo MIME validation, strict extension whitelisting, randomized hash
+                                storage, and script execution blocking.</p>
+                        </div>
+                    </div>
+                    <div class="security-item">
+                        <i class="fa-solid fa-shield-virus" aria-hidden="true"></i>
+                        <div>
+                            <h4>CVE-2024-4577 Hardening</h4>
+                            <p>Hardened against Windows PHP CGI argument injection attacks with active query string
+                                sanitization and modern CSP headers.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- CTA Section -->
+        <section style="text-align:center; padding:4rem 2rem;">
+            <h2 style="font-size:2.2rem; margin-bottom:1rem;">Ready to Elevate Your Campus?</h2>
+            <p
+                style="color:var(--color-text-secondary); margin-bottom:2rem; max-width:520px; margin-left:auto; margin-right:auto;">
+                Join thousands of students and faculty already keeping their campus infrastructure safe, modern, and
+                operational.
+            </p>
+            <a href="pages/register.html" class="btn btn-primary btn-lg">
+                <i class="fa-solid fa-user-plus"></i> Create Free Account
+            </a>
+        </section>
+
+        <!-- Footer -->
+        <footer
+            style="border-top:1px solid var(--color-border); padding:2.5rem 2rem; text-align:center; color:var(--color-text-muted); font-size:0.82rem;">
+            <p>&copy; 2026 CampusFix. Report it. Track it. Fix it.</p>
+            <p style="margin-top:6px;">Built with open-source excellence for educational institutions.</p>
+        </footer>
+    </main>
+
+    <!-- Three.js Library for 3D Hero Canvas -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="js/app.js"></script>
+    <script>
+        // Check authentication state for dynamic navigation header
+        document.addEventListener('DOMContentLoaded', async () => {
+            const user = await checkAuth();
+            if (user) {
+                const isAdmin = ['super_admin', 'department_admin', 'staff'].includes(user.role);
+                const navActions = document.getElementById('navActions');
+                if (navActions) {
+                    navActions.innerHTML = `
+                        <a href="${isAdmin ? 'pages/admin.html' : 'pages/dashboard.html'}" class="btn btn-primary btn-sm">
+                            <i class="fa-solid fa-gauge"></i> Dashboard
+                        </a>
+                    `;
+                }
+            }
+        });
+    </script>
+</body>
+
+</html>

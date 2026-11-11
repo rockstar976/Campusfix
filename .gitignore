@@ -1,0 +1,47 @@
+# ========================
+# CampusFix .gitignore
+# ========================
+
+# Uploaded files (user content — don't commit)
+uploads/*
+!uploads/.gitkeep
+!uploads/.htaccess
+
+# Sensitive configuration (has local DB passwords)
+includes/config.php
+
+# Local development databases & logs
+*.db
+*.sqlite
+*.sqlite3
+campusfix_preview.db
+*.log
+
+# Personal & temporary documents
+*.pdf
+pdf_content.txt
+*.tmp
+
+# Python bytecode & caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE / Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Node modules (if any frontend tools added)
+node_modules/
+package-lock.json
+
+# Environment files
+.env
+.env.local
+.env.*.local
