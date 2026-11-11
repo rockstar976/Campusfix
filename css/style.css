@@ -629,6 +629,65 @@ select.form-control {
     50% { opacity: 0.7; }
 }
 
+/* ---------- Staff/Admin Feature Navigation Bar (Equal Width) ---------- */
+.admin-feature-nav {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 1.75rem;
+}
+
+.admin-feature-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 12px 18px;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-secondary);
+    font-weight: 600;
+    font-size: 0.95rem;
+    text-decoration: none;
+    transition: all var(--transition-fast);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+}
+
+.admin-feature-btn i {
+    font-size: 1.05rem;
+    color: var(--color-text-muted);
+    transition: color var(--transition-fast);
+}
+
+.admin-feature-btn:hover {
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(225, 29, 72, 0.08);
+}
+
+.admin-feature-btn:hover i {
+    color: var(--color-accent);
+}
+
+.admin-feature-btn.active {
+    background: var(--color-accent);
+    color: #ffffff;
+    border-color: var(--color-accent);
+    box-shadow: 0 4px 14px var(--color-accent-glow);
+}
+
+.admin-feature-btn.active i {
+    color: #ffffff;
+}
+
+@media (max-width: 640px) {
+    .admin-feature-nav {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* Department Backlog Analytics Card & Progress */
 .dept-backlog-item {
     display: flex;
@@ -978,7 +1037,7 @@ select.form-control {
     background: rgba(255, 255, 255, 0.90);
     backdrop-filter: blur(16px);
     border: 1px solid rgba(225, 29, 72, 0.25);
-    border-radius: 999px;
+    border-radius: var(--radius-sm);
     padding: 6px 14px;
     box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
     transition: all 0.3s ease;
@@ -987,7 +1046,7 @@ select.form-control {
 .dock-btn {
     background: none;
     border: 1px solid transparent;
-    border-radius: 999px;
+    border-radius: 4px;
     padding: 5px 12px;
     font-size: 0.76rem;
     font-weight: 600;
@@ -1025,7 +1084,8 @@ select.form-control {
 .dock-status .status-dot {
     width: 7px;
     height: 7px;
-    border-radius: 50%;
+    border-radius: 1px;
+    transform: rotate(45deg);
     background: var(--color-accent);
     box-shadow: 0 0 8px var(--color-accent);
     animation: badgePulse 2s infinite;
@@ -1133,29 +1193,93 @@ select.form-control {
 .badge-pulse {
     width: 8px;
     height: 8px;
-    border-radius: 50%;
+    border-radius: 1px;
+    transform: rotate(45deg);
     background: var(--color-accent);
     box-shadow: 0 0 10px var(--color-accent);
     animation: badgePulse 2s infinite;
 }
 
 @keyframes badgePulse {
-    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.6); }
-    70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(225, 29, 72, 0); }
-    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(225, 29, 72, 0); }
+    0% { transform: rotate(45deg) scale(0.95); box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.6); }
+    70% { transform: rotate(45deg) scale(1.15); box-shadow: 0 0 0 8px rgba(225, 29, 72, 0); }
+    100% { transform: rotate(45deg) scale(0.95); box-shadow: 0 0 0 0 rgba(225, 29, 72, 0); }
 }
 
-.hero h1 {
-    font-size: 3.8rem;
+/* ---------- 3D Asymmetric Stage Grid (Reveals 3D Content) ---------- */
+.hero-stage-grid {
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 3rem;
+    align-items: center;
+    text-align: left;
+    margin-bottom: 2.5rem;
+    position: relative;
+    z-index: 2;
+}
+
+.hero-stage-content {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.hero-stage-visual {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.hero-stage-visual .hero-simulation-wrapper {
+    margin: 0;
+    width: 100%;
+}
+
+/* ---------- Scroll-Triggered 3D Kinetic Typography ---------- */
+.hero h1,
+.hero-3d-title {
+    font-size: 3.6rem;
     font-weight: 800;
     letter-spacing: -1.5px;
     line-height: 1.1;
     position: relative;
     z-index: 1;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
+    perspective: 1000px;
+    transform-style: preserve-3d;
 }
 
-.hero h1 .gradient-text {
+.type3d-layer {
+    display: block;
+    transform-style: preserve-3d;
+    will-change: transform;
+}
+
+.type3d-prefix {
+    font-size: 2.6rem;
+    color: var(--color-text-primary);
+    transform-origin: left center;
+}
+
+.type3d-main {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    transform-origin: left center;
+}
+
+.type3d-word {
+    display: inline-block;
+    transform-style: preserve-3d;
+    will-change: transform, text-shadow;
+    transition: text-shadow 0.2s ease;
+    text-shadow: 0 1px 0 #cbd5e1, 0 2px 0 #94a3b8, 0 3px 0 rgba(15, 23, 42, 0.15), 0 8px 16px rgba(225, 29, 72, 0.18);
+}
+
+.hero h1 .gradient-text,
+.hero-3d-title .gradient-text {
     background: linear-gradient(135deg, #0f172a 0%, var(--color-accent) 55%, #991b1b 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
@@ -1163,10 +1287,10 @@ select.form-control {
 }
 
 .hero .tagline {
-    font-size: 1.2rem;
+    font-size: 1.15rem;
     color: var(--color-text-secondary);
-    max-width: 620px;
-    margin: 1.25rem auto 2.25rem;
+    max-width: 580px;
+    margin: 0.75rem 0 2rem;
     position: relative;
     z-index: 1;
     line-height: 1.6;
@@ -1175,10 +1299,55 @@ select.form-control {
 .hero-actions {
     display: flex;
     gap: 1rem;
-    justify-content: center;
+    justify-content: flex-start;
     position: relative;
     z-index: 1;
     margin-bottom: 2rem;
+}
+
+/* ---------- Subtle "Move" Animation on Bottom Scene Buttons ---------- */
+@keyframes subtleBtnFloatMove {
+    0%, 100% {
+        transform: translateY(0);
+        box-shadow: 0 2px 12px var(--color-accent-glow);
+    }
+    50% {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 24px var(--color-accent-glow);
+    }
+}
+
+@keyframes subtleBtnSecondaryFloat {
+    0%, 100% {
+        transform: translateY(0);
+        box-shadow: var(--shadow-sm);
+    }
+    50% {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-md);
+    }
+}
+
+.btn-subtle-move-primary {
+    animation: subtleBtnFloatMove 3.6s ease-in-out infinite;
+}
+
+.btn-subtle-move-secondary {
+    animation: subtleBtnSecondaryFloat 3.6s ease-in-out infinite;
+    animation-delay: 1.8s;
+}
+
+@keyframes subtleDockFloat {
+    0%, 100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-3px);
+    }
+}
+
+.hero-3d-dock {
+    animation: subtleDockFloat 4.2s ease-in-out infinite;
 }
 
 /* ---------- Instant Ticket Quick-Tracker Bar ---------- */
@@ -1998,6 +2167,30 @@ select.form-control {
 /* ============================================
    RESPONSIVE
    ============================================ */
+@media (max-width: 992px) {
+    .hero-stage-grid {
+        grid-template-columns: 1fr;
+        text-align: center;
+        gap: 2rem;
+    }
+    .hero-stage-content {
+        align-items: center;
+    }
+    .type3d-prefix {
+        font-size: 2.2rem;
+    }
+    .hero-3d-title,
+    .hero h1 {
+        font-size: 2.8rem;
+    }
+    .type3d-main {
+        justify-content: center;
+    }
+    .hero-actions {
+        justify-content: center;
+    }
+}
+
 @media (max-width: 768px) {
     .navbar { padding: 0 1rem; }
     .navbar-links { 

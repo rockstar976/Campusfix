@@ -9,13 +9,40 @@ let totalPages = 1;
 let departments = [];
 let staffMembers = [];
 let categories = [];
+let assignedToMeOnly = false;
 
 document.addEventListener('DOMContentLoaded', async () => {
+    // Smooth redirection for legacy anchor links to dedicated pages
+    if (window.location.hash === '#complaints' && !window.location.pathname.includes('complaints.html')) {
+        window.location.replace('complaints.html');
+        return;
+    }
+    if (window.location.hash === '#analytics' && !window.location.pathname.includes('analytics.html')) {
+        window.location.replace('analytics.html');
+        return;
+    }
+
     const user = await setupNavbar();
     if (!user) return redirectTo('login.html');
 
     if (!['super_admin', 'department_admin', 'staff'].includes(user.role)) {
         return redirectTo('dashboard.html');
+    }
+
+    // Customize portal headers for maintenance staff
+    if (user.role === 'staff') {
+        const titleEl = document.getElementById('adminPageTitle');
+        const subEl = document.getElementById('adminPageSubtitle');
+        if (titleEl) {
+            if (window.location.pathname.includes('complaints.html')) {
+                titleEl.textContent = 'Staff Work Orders & Assigned Issues';
+            } else if (window.location.pathname.includes('analytics.html')) {
+                titleEl.textContent = 'Staff Performance & SLA Telemetry';
+            } else {
+                titleEl.textContent = 'Staff Maintenance Portal & Work Orders';
+            }
+        }
+        if (subEl) subEl.textContent = 'View and resolve maintenance issues across campus';
     }
 
     // Load dropdown data
@@ -54,16 +81,20 @@ function populateFilterDropdowns() {
 async function loadAdminDashboard() {
     // Load stats
     const statsResult = await api.get('complaints.php?action=stats');
-    if (statsResult.success) {
+    if (statsResult && statsResult.success && statsResult.stats) {
         const s = statsResult.stats;
-        document.getElementById('statTotal').textContent = s.total || 0;
-        document.getElementById('statPending').textContent = s.pending || 0;
-        document.getElementById('statProgress').textContent = s.in_progress || 0;
-        document.getElementById('statResolved').textContent = s.resolved || 0;
-        if (document.getElementById('statOverdue')) document.getElementById('statOverdue').textContent = s.overdue || 0;
-        if (document.getElementById('statSlaCompliance')) document.getElementById('statSlaCompliance').textContent = (s.sla_compliance_rate ?? 100) + '%';
-        if (document.getElementById('statAvgResolution')) document.getElementById('statAvgResolution').textContent = (s.avg_resolution_hours ?? 0) + 'h';
-        if (document.getElementById('statNearingBreach')) document.getElementById('statNearingBreach').textContent = s.nearing_breach || 0;
+        const setEl = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+        };
+        setEl('statTotal', s.total || 0);
+        setEl('statPending', s.pending || 0);
+        setEl('statProgress', s.in_progress || 0);
+        setEl('statResolved', s.resolved || 0);
+        setEl('statOverdue', s.overdue || 0);
+        setEl('statSlaCompliance', (s.sla_compliance_rate ?? 100) + '%');
+        setEl('statAvgResolution', (s.avg_resolution_hours ?? 0) + 'h');
+        setEl('statNearingBreach', s.nearing_breach || 0);
 
         // Render Department Backlog Analytics
         const grid = document.getElementById('deptBacklogGrid');
@@ -105,6 +136,9 @@ async function loadAdminDashboard() {
 // Load Complaints with filters
 // ============================================
 async function loadComplaints() {
+    const container = document.getElementById('complaintsTableBody');
+    if (!container) return;
+
     const status = document.getElementById('filterStatus')?.value || '';
     const category = document.getElementById('filterCategory')?.value || '';
     const priority = document.getElementById('filterPriority')?.value || '';
@@ -117,11 +151,13 @@ async function loadComplaints() {
     if (priority) url += `&priority=${priority}`;
     if (slaFilter) url += `&sla_filter=${encodeURIComponent(slaFilter)}`;
     if (search) url += `&search=${encodeURIComponent(search)}`;
+    if (assignedToMeOnly) url += `&assigned_to=me`;
 
     const result = await api.get(url);
-    const container = document.getElementById('complaintsTableBody');
 
-    if (!result.success || result.complaints.length === 0) {
+    const complaintsList = (result && result.success && Array.isArray(result.complaints)) ? result.complaints : [];
+
+    if (complaintsList.length === 0) {
         container.innerHTML = `
             <tr>
                 <td colspan="9">
@@ -136,8 +172,8 @@ async function loadComplaints() {
         return;
     }
 
-    allComplaints = result.complaints;
-    totalPages = result.pages;
+    allComplaints = complaintsList;
+    totalPages = result.pages || (result.pagination ? result.pagination.totalPages : 1) || 1;
 
     container.innerHTML = result.complaints.map(c => `
         <tr>
@@ -198,12 +234,41 @@ function applyFilters() {
     loadComplaints();
 }
 
+function toggleAssignedToMe() {
+    assignedToMeOnly = !assignedToMeOnly;
+    currentPage = 1;
+    const btn = document.getElementById('btnAssignedToMe');
+    const text = document.getElementById('assignedMeText');
+    if (btn) {
+        if (assignedToMeOnly) {
+            btn.classList.add('btn-primary');
+            btn.classList.remove('btn-secondary');
+            if (text) text.textContent = 'Showing: My Assigned';
+            showToast('Showing issues assigned to you.', 'info');
+        } else {
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-secondary');
+            if (text) text.textContent = 'Assigned to Me';
+            showToast('Showing all campus issues.', 'info');
+        }
+    }
+    loadComplaints();
+}
+
 function resetFilters() {
     document.getElementById('filterStatus').value = '';
     if (document.getElementById('filterSla')) document.getElementById('filterSla').value = '';
     document.getElementById('filterCategory').value = '';
     document.getElementById('filterPriority').value = '';
     document.getElementById('searchInput').value = '';
+    assignedToMeOnly = false;
+    const btn = document.getElementById('btnAssignedToMe');
+    const text = document.getElementById('assignedMeText');
+    if (btn) {
+        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-secondary');
+    }
+    if (text) text.textContent = 'Assigned to Me';
     currentPage = 1;
     loadComplaints();
 }
@@ -292,11 +357,14 @@ async function openComplaintDetail(id) {
             <div style="margin-bottom:1.5rem;">
                 <div style="font-size:0.78rem; color:var(--color-text-muted); margin-bottom:6px;">Evidence</div>
                 <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-                    ${c.attachments.map(a => `
-                        <img src="../uploads/${a.storage_key}" alt="${a.original_filename}" 
-                             style="max-width:150px; border-radius:var(--radius-sm); border:1px solid var(--color-border); cursor:pointer;"
-                             onclick="window.open('../uploads/${a.storage_key}', '_blank')">
-                    `).join('')}
+                    ${c.attachments.map(a => {
+                        const src = (a.storage_key && (a.storage_key.startsWith('data:') || a.storage_key.startsWith('http'))) ? a.storage_key : `../uploads/${a.storage_key}`;
+                        return `
+                            <img src="${src}" alt="${a.original_filename || 'Evidence'}" 
+                                 style="max-width:150px; max-height:150px; object-fit:cover; border-radius:var(--radius-sm); border:1px solid var(--color-border); cursor:pointer;"
+                                 onclick="window.open('${src}', '_blank')">
+                        `;
+                    }).join('')}
                 </div>
             </div>
         ` : ''}

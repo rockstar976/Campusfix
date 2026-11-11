@@ -8,10 +8,10 @@
  * 3. Never commit config.php (it's in .gitignore)
  */
 
-// Mitigate CVE-2024-4577 (Windows PHP CGI Argument Injection Vulnerability)
+// Mitigate CVE-2024-4577 & CVE-2024-9026 (Windows PHP CGI Argument & Best-Fit Character Injection)
 if (isset($_SERVER['QUERY_STRING']) && (
-    stripos($_SERVER['QUERY_STRING'], '%ad') !== false ||
-    preg_match('/^-d/i', $_SERVER['QUERY_STRING']) ||
+    preg_match('/(%ad|\xad|\xc2\xad|\xef\xbc\x8d)/i', $_SERVER['QUERY_STRING']) ||
+    preg_match('/(^|&)[-\xad\s]*[dDbBcsnTwW]/', $_SERVER['QUERY_STRING']) ||
     stripos($_SERVER['QUERY_STRING'], 'auto_prepend_file') !== false ||
     stripos($_SERVER['QUERY_STRING'], 'allow_url_include') !== false ||
     stripos($_SERVER['QUERY_STRING'], 'disable_functions') !== false

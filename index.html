@@ -49,123 +49,124 @@
         <div class="hero-wrapper">
             <canvas id="hero3dCanvas" class="hero-3d-canvas" aria-hidden="true"></canvas>
 
-            <!-- 3D Holographic Tooltip HUD -->
-            <div class="holo-tooltip" id="holoTooltip" aria-hidden="true">
-                <div class="tooltip-header">
-                    <span class="tooltip-badge sim-badge-urgent" id="tooltipBadge">High Priority</span>
-                    <span class="tooltip-id" id="tooltipId">CF-2026-0142</span>
-                </div>
-                <div class="tooltip-title" id="tooltipTitle">Water Cooler Leakage &amp; Broken Filter</div>
-                <div class="tooltip-location" id="tooltipLocation"><i class="fa-solid fa-location-dot"></i> Science Block B &bull; Lab 204</div>
-                <div class="tooltip-hint"><i class="fa-solid fa-hand-pointer"></i> Click hotspot to inspect live pass</div>
-            </div>
-
-            <!-- 3D Campus Digital Twin Control Dock -->
-            <div class="hero-3d-dock" id="hero3dDock" aria-label="3D Campus Twin Controls">
-                <button type="button" class="dock-btn active" id="btnToggleOrbit" onclick="toggle3DOrbit()" title="Toggle 360° Orbit Rotation">
+            <!-- 3D Kinetic Core Control Dock -->
+            <div class="hero-3d-dock" id="hero3dDock" aria-label="3D Incident Core Controls">
+                <button type="button" class="dock-btn active" id="btnToggleOrbit" onclick="toggle3DOrbit()" title="Toggle Kinetic Orbit Rotation">
                     <i class="fa-solid fa-arrows-rotate"></i> <span>Orbit</span>
                 </button>
-                <button type="button" class="dock-btn" id="btnToggleHolo" onclick="toggle3DHoloMode()" title="Toggle Holo-Wireframe Scan">
-                    <i class="fa-solid fa-draw-polygon"></i> <span>Holo Scan</span>
+                <button type="button" class="dock-btn" id="btnToggleHolo" onclick="toggle3DHoloMode()" title="Toggle Cyber Wireframe Mode">
+                    <i class="fa-solid fa-draw-polygon"></i> <span>Wireframe</span>
                 </button>
-                <button type="button" class="dock-btn" id="btnCycleHotspot" onclick="cycle3DHotspot()" title="Focus Active Incident Hotspot">
-                    <i class="fa-solid fa-crosshairs"></i> <span>Focus Pin</span>
-                </button>
-                <button type="button" class="dock-btn" id="btnResetCamera" onclick="reset3DCamera()" title="Reset 3D Perspective">
+                <button type="button" class="dock-btn" id="btnResetCamera" onclick="reset3DCamera()" title="Reset 3D Core">
                     <i class="fa-solid fa-compress"></i> <span>Reset</span>
                 </button>
                 <div class="dock-status">
-                    <span class="status-dot"></span> 4 Hotspots Live
+                    <span class="status-dot"></span> Core Live: 99.8% SLA
                 </div>
             </div>
 
             <section class="hero">
-                <div class="hero-badge">
-                    <span class="badge-pulse" aria-hidden="true"></span>
-                    <span>Official Campus Issue Resolution Platform</span>
-                </div>
+                <!-- Two-Column Asymmetric Unobstructed Layout (Reveals 3D Scene) -->
+                <div class="hero-stage-grid">
+                    <!-- Left Column: Typography, Actions, & Quick Tracker -->
+                    <div class="hero-stage-content">
+                        <div class="hero-badge">
+                            <span class="badge-pulse" aria-hidden="true"></span>
+                            <span>Official Campus Issue Resolution Platform</span>
+                        </div>
 
-                <h1>
-                    Campus Issues?<br>
-                    <span class="gradient-text">Report. Track. Fix.</span>
-                </h1>
+                        <!-- Scroll-Triggered 3D Kinetic Typography -->
+                        <h1 class="hero-3d-title" id="scroll3dTitle">
+                            <span class="type3d-layer type3d-prefix" data-depth="0.2">Campus Issues?</span>
+                            <span class="type3d-layer type3d-main gradient-text" data-depth="0.5">
+                                <span class="type3d-word" data-word="report">Report.</span>
+                                <span class="type3d-word" data-word="track">Track.</span>
+                                <span class="type3d-word" data-word="fix">Fix.</span>
+                            </span>
+                        </h1>
 
-                <p class="tagline">
-                    Empowering students, faculty, and maintenance staff with real-time tracking,
-                    cryptographic photo evidence, and automated departmental routing.
-                </p>
+                        <p class="tagline">
+                            Empowering students, faculty, and maintenance staff with real-time tracking,
+                            cryptographic photo evidence, and automated departmental routing.
+                        </p>
 
-                <div class="hero-actions">
-                    <a href="pages/register.html" class="btn btn-primary btn-lg">
-                        <i class="fa-solid fa-rocket"></i> Get Started Free
-                    </a>
-                    <a href="#features" class="btn btn-secondary btn-lg">
-                        <i class="fa-solid fa-play"></i> Explore Platform
-                    </a>
-                </div>
+                        <!-- Bottom Section Buttons with Subtle Move Animation -->
+                        <div class="hero-actions">
+                            <a href="pages/register.html" class="btn btn-primary btn-lg btn-subtle-move-primary">
+                                <i class="fa-solid fa-rocket"></i> Get Started Free
+                            </a>
+                            <a href="#features" class="btn btn-secondary btn-lg btn-subtle-move-secondary">
+                                <i class="fa-solid fa-play"></i> Explore Platform
+                            </a>
+                        </div>
 
-                <!-- Instant Ticket Quick-Tracker Bar -->
-                <div class="ticket-quick-tracker" id="ticketQuickTracker">
-                    <form class="tracker-input-wrapper" onsubmit="handleQuickTrack(event)">
-                        <i class="fa-solid fa-magnifying-glass tracker-search-icon"></i>
-                        <input type="text" id="quickTrackerInput" placeholder="Enter Complaint ID (e.g. CF-2026-0142) or keyword..." autocomplete="off" spellcheck="false">
-                        <button type="submit" class="btn btn-primary" id="quickTrackBtn">
-                            <i class="fa-solid fa-bolt"></i> Track Status
-                        </button>
-                    </form>
-                    <div class="tracker-hints">
-                        <span class="hints-label"><i class="fa-solid fa-fire"></i> Quick Query:</span>
-                        <button type="button" class="tracker-tag" onclick="quickSearchTag('CF-2026-0142')">CF-2026-0142</button>
-                        <button type="button" class="tracker-tag" onclick="quickSearchTag('CF-2026-0098')">CF-2026-0098</button>
-                        <button type="button" class="tracker-tag" onclick="quickSearchTag('CF-2026-0211')">CF-2026-0211</button>
-                        <button type="button" class="tracker-tag" onclick="quickSearchTag('CF-2026-0185')">CF-2026-0185</button>
+                        <!-- Instant Ticket Quick-Tracker Bar -->
+                        <div class="ticket-quick-tracker" id="ticketQuickTracker">
+                            <form class="tracker-input-wrapper" onsubmit="handleQuickTrack(event)">
+                                <i class="fa-solid fa-magnifying-glass tracker-search-icon"></i>
+                                <input type="text" id="quickTrackerInput" placeholder="Enter Complaint ID (e.g. CF-2026-0142) or keyword..." autocomplete="off" spellcheck="false">
+                                <button type="submit" class="btn btn-primary btn-subtle-move-primary" id="quickTrackBtn">
+                                    <i class="fa-solid fa-bolt"></i> Track Status
+                                </button>
+                            </form>
+                            <div class="tracker-hints">
+                                <span class="hints-label"><i class="fa-solid fa-fire"></i> Quick Query:</span>
+                                <button type="button" class="tracker-tag" onclick="quickSearchTag('CF-2026-0142')">CF-2026-0142</button>
+                                <button type="button" class="tracker-tag" onclick="quickSearchTag('CF-2026-0098')">CF-2026-0098</button>
+                                <button type="button" class="tracker-tag" onclick="quickSearchTag('CF-2026-0211')">CF-2026-0211</button>
+                                <button type="button" class="tracker-tag" onclick="quickSearchTag('CF-2026-0185')">CF-2026-0185</button>
+                            </div>
+                        </div>
                     </div>
-                </div>
 
-                <!-- Interactive 3D Glassmorphic Live Simulation Card -->
-                <div class="hero-simulation-wrapper">
-                    <div class="hero-sim-card">
-                        <div class="sim-card-header">
-                            <span class="sim-badge sim-badge-urgent"><i class="fa-solid fa-bolt"></i> High
-                                Priority</span>
-                            <span class="sim-id">CF-2026-0142</span>
-                        </div>
-                        <h3 class="sim-title">Water Cooler Leakage &amp; Broken Filter</h3>
-                        <div class="sim-meta">
-                            <span><i class="fa-solid fa-location-dot"></i> Science Block B &bull; Floor 2 &bull; Lab
-                                204</span>
-                        </div>
-                        <div class="sim-progress-bar">
-                            <div class="sim-step completed">
-                                <div class="dot"><i class="fa-solid fa-check"></i></div>
-                                <span>Reported</span>
-                            </div>
-                            <div class="sim-step completed">
-                                <div class="dot"><i class="fa-solid fa-check"></i></div>
-                                <span>Assigned</span>
-                            </div>
-                            <div class="sim-step active">
-                                <div class="dot"><i class="fa-solid fa-spinner fa-spin"></i></div>
-                                <span>In Progress</span>
-                            </div>
-                            <div class="sim-step">
-                                <div class="dot"></div>
-                                <span>Resolved</span>
-                            </div>
-                        </div>
-                        <div class="sim-card-footer">
-                            <div class="sim-actions">
-                                <button class="btn-sim-upvote" id="simUpvoteBtn" onclick="toggleSimUpvote(event)">
-                                    <i class="fa-solid fa-thumbs-up"></i>
-                                    <span>Upvote</span>
-                                    <span class="upvote-count" id="simUpvoteCount">42</span>
-                                </button>
-                                <button class="btn-sim-status" onclick="cycleSimStatus(event)">
-                                    <i class="fa-solid fa-forward-step"></i> Simulate Status
-                                </button>
-                            </div>
-                            <div class="sim-verified-tag">
-                                <i class="fa-solid fa-shield-halved"></i> Photo Evidence Attached
+                    <!-- Right Column: Unobstructed 3D Focal Aperture & Floating Glass Card -->
+                    <div class="hero-stage-visual">
+                        <!-- Interactive 3D Glassmorphic Live Simulation Card -->
+                        <div class="hero-simulation-wrapper">
+                            <div class="hero-sim-card">
+                                <div class="sim-card-header">
+                                    <span class="sim-badge sim-badge-urgent"><i class="fa-solid fa-bolt"></i> High
+                                        Priority</span>
+                                    <span class="sim-id">CF-2026-0142</span>
+                                </div>
+                                <h3 class="sim-title">Water Cooler Leakage &amp; Broken Filter</h3>
+                                <div class="sim-meta">
+                                    <span><i class="fa-solid fa-location-dot"></i> Science Block B &bull; Floor 2 &bull; Lab
+                                        204</span>
+                                </div>
+                                <div class="sim-progress-bar">
+                                    <div class="sim-step completed">
+                                        <div class="dot"><i class="fa-solid fa-check"></i></div>
+                                        <span>Reported</span>
+                                    </div>
+                                    <div class="sim-step completed">
+                                        <div class="dot"><i class="fa-solid fa-check"></i></div>
+                                        <span>Assigned</span>
+                                    </div>
+                                    <div class="sim-step active">
+                                        <div class="dot"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                                        <span>In Progress</span>
+                                    </div>
+                                    <div class="sim-step">
+                                        <div class="dot"></div>
+                                        <span>Resolved</span>
+                                    </div>
+                                </div>
+                                <div class="sim-card-footer">
+                                    <div class="sim-actions">
+                                        <button class="btn-sim-upvote btn-subtle-move-secondary" id="simUpvoteBtn" onclick="toggleSimUpvote(event)">
+                                            <i class="fa-solid fa-thumbs-up"></i>
+                                            <span>Upvote</span>
+                                            <span class="upvote-count" id="simUpvoteCount">42</span>
+                                        </button>
+                                        <button class="btn-sim-status" onclick="cycleSimStatus(event)">
+                                            <i class="fa-solid fa-forward-step"></i> Simulate Status
+                                        </button>
+                                    </div>
+                                    <div class="sim-verified-tag">
+                                        <i class="fa-solid fa-shield-halved"></i> Photo Evidence Attached
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>

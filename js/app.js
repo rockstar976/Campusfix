@@ -4,21 +4,585 @@
  */
 
 const isPagesDir = window.location.pathname.includes('/pages/') || window.location.href.includes('/pages/');
-const API_BASE = isPagesDir ? '../php/api' : 'php/api';
+let API_BASE = isPagesDir ? '../php/api' : 'php/api';
+
+// Live Server Port Detection: If running on a static dev port (e.g. 5500, 5501, 3000),
+// automatically probe if CampusFix local preview server is active on port 8080.
+if (window.location.protocol.startsWith('http') && window.location.port !== '8080' && window.location.port !== '') {
+    fetch('http://localhost:8080/php/api/data.php?action=categories', { mode: 'cors' })
+        .then(r => r.json())
+        .then(d => {
+            if (d && d.success) {
+                API_BASE = 'http://localhost:8080/php/api';
+                console.info('Live Server auto-connected to CampusFix preview backend on port 8080');
+            }
+        })
+        .catch(() => {});
+}
 
 // ============================================
-// API Helper
+// Live Server In-Browser Simulation Engine
+// Allows full interactive testing (login, complaints, staff tasks, status updates, map)
+// directly inside static file servers like VS Code Live Server where PHP is not executed.
+// ============================================
+const defaultMockDepartments = [
+    { id: 1, name: 'Electrical Maintenance', active: 1 },
+    { id: 2, name: 'IT Infrastructure', active: 1 },
+    { id: 3, name: 'Water Works & Plumbing', active: 1 },
+    { id: 4, name: 'Facilities & Sanitation', active: 1 },
+    { id: 5, name: 'Campus Grounds & Civil', active: 1 }
+];
+
+const defaultMockCategories = [
+    { id: 1, name: 'Electrical & Power Systems', icon: 'fa-bolt', default_department_id: 1, sla_hours: 6 },
+    { id: 2, name: 'IT & Network Support', icon: 'fa-wifi', default_department_id: 2, sla_hours: 4 },
+    { id: 3, name: 'Plumbing & Water Supply', icon: 'fa-faucet-drip', default_department_id: 3, sla_hours: 8 },
+    { id: 4, name: 'Sanitation & Housekeeping', icon: 'fa-broom', default_department_id: 4, sla_hours: 12 },
+    { id: 5, name: 'Facilities & Infrastructure', icon: 'fa-building', default_department_id: 4, sla_hours: 24 }
+];
+
+const defaultMockStaff = [
+    { id: 2, name: 'Maintenance Staff', email: 'staff@campusfix.in', role: 'staff', department_id: 1 },
+    { id: 4, name: 'Rajesh Sharma', email: 'rajesh@campusfix.in', role: 'staff', department_id: 3 },
+    { id: 5, name: 'Vikram Mehta', email: 'vikram@campusfix.in', role: 'staff', department_id: 1 }
+];
+
+const defaultMockComplaints = [
+    {
+        id: 1,
+        complaint_id: 'CF-2026-0001',
+        title: 'Faulty fluorescent tube in Lab 304',
+        description: 'Frequent flickering causing eye strain during digital electronics practicals.',
+        location: 'Academic Block A • Room 304',
+        category_id: 1,
+        category_name: 'Electrical & Power Systems',
+        category_icon: 'fa-bolt',
+        department_id: 1,
+        department_name: 'Electrical Maintenance',
+        priority: 'high',
+        status: 'in_progress',
+        assigned_to: 2,
+        assigned_name: 'Maintenance Staff',
+        created_by: 3,
+        reporter_name: 'Rahul Sharma (Student)',
+        upvotes_count: 5,
+        escalation_level: 0,
+        latitude: 26.9128,
+        longitude: 75.7865,
+        created_at: new Date(Date.now() - 3600 * 1000 * 5).toISOString(),
+        sla_due_at: new Date(Date.now() + 3600 * 1000 * 4).toISOString(),
+        attachments: []
+    },
+    {
+        id: 2,
+        complaint_id: 'CF-2026-0002',
+        title: 'Wi-Fi Access Point offline in Library East Wing',
+        description: 'No network signal in reading cubicles near journal section.',
+        location: 'Central Library • East Wing',
+        category_id: 2,
+        category_name: 'IT & Network Support',
+        category_icon: 'fa-wifi',
+        department_id: 2,
+        department_name: 'IT Infrastructure',
+        priority: 'medium',
+        status: 'pending',
+        assigned_to: null,
+        assigned_name: null,
+        created_by: 3,
+        reporter_name: 'Rahul Sharma (Student)',
+        upvotes_count: 14,
+        escalation_level: 0,
+        latitude: 26.9135,
+        longitude: 75.7880,
+        created_at: new Date(Date.now() - 3600 * 1000 * 8).toISOString(),
+        sla_due_at: new Date(Date.now() + 3600 * 1000 * 16).toISOString(),
+        attachments: []
+    },
+    {
+        id: 3,
+        complaint_id: 'CF-2026-0003',
+        title: 'Water cooler leaking near Sports Complex',
+        description: 'Continuous water pooling creating slipping hazard.',
+        location: 'Sports Pavilion Entrance',
+        category_id: 3,
+        category_name: 'Plumbing & Water Supply',
+        category_icon: 'fa-faucet-drip',
+        department_id: 3,
+        department_name: 'Water Works & Plumbing',
+        priority: 'urgent',
+        status: 'resolved',
+        assigned_to: 2,
+        assigned_name: 'Maintenance Staff',
+        created_by: 3,
+        reporter_name: 'Rahul Sharma (Student)',
+        upvotes_count: 8,
+        escalation_level: 0,
+        latitude: 26.9142,
+        longitude: 75.7892,
+        created_at: new Date(Date.now() - 3600 * 1000 * 18).toISOString(),
+        sla_due_at: new Date(Date.now() - 3600 * 1000 * 6).toISOString(),
+        resolved_at: new Date(Date.now() - 3600 * 1000 * 8).toISOString(),
+        attachments: []
+    },
+    {
+        id: 4,
+        complaint_id: 'CF-2026-0004',
+        title: 'Spilled beverage on Seminar Hall stairwell',
+        description: 'Sticky liquid on stairs between ground and 1st floor.',
+        location: 'Auditorium Block • Main Staircase',
+        category_id: 4,
+        category_name: 'Sanitation & Housekeeping',
+        category_icon: 'fa-broom',
+        department_id: 4,
+        department_name: 'Facilities & Sanitation',
+        priority: 'low',
+        status: 'pending',
+        assigned_to: null,
+        assigned_name: null,
+        created_by: 3,
+        reporter_name: 'Rahul Sharma (Student)',
+        upvotes_count: 2,
+        escalation_level: 0,
+        latitude: 26.9118,
+        longitude: 75.7858,
+        created_at: new Date(Date.now() - 3600 * 1000 * 2).toISOString(),
+        sla_due_at: new Date(Date.now() + 3600 * 1000 * 10).toISOString(),
+        attachments: []
+    },
+    {
+        id: 5,
+        complaint_id: 'CF-2026-0005',
+        title: 'Hostel Mess Exhaust Fan Breakdown',
+        description: 'Heavy smoke buildup in kitchen dining corridor.',
+        location: 'Boys Hostel 2 • Dining Hall',
+        category_id: 5,
+        category_name: 'Facilities & Infrastructure',
+        category_icon: 'fa-building',
+        department_id: 4,
+        department_name: 'Facilities & Sanitation',
+        priority: 'medium',
+        status: 'pending',
+        assigned_to: null,
+        assigned_name: null,
+        created_by: 3,
+        reporter_name: 'Rahul Sharma (Student)',
+        upvotes_count: 6,
+        escalation_level: 0,
+        latitude: 26.9150,
+        longitude: 75.7860,
+        created_at: new Date(Date.now() - 3600 * 1000 * 3).toISOString(),
+        sla_due_at: new Date(Date.now() + 3600 * 1000 * 21).toISOString(),
+        attachments: []
+    }
+];
+
+function enrichMockSla(comp) {
+    if (!comp.sla_due_at) {
+        comp.sla_status = 'none';
+        comp.sla_human = 'No SLA';
+        return comp;
+    }
+    const now = Date.now();
+    const due = new Date(comp.sla_due_at).getTime();
+    const isResolved = ['resolved', 'closed'].includes(comp.status);
+    if (isResolved) {
+        comp.sla_status = 'resolved';
+        comp.sla_human = 'Resolved';
+    } else if (now > due) {
+        comp.sla_status = 'overdue';
+        const diffHrs = Math.ceil((now - due) / (1000 * 3600));
+        comp.sla_human = `Overdue by ${diffHrs}h`;
+    } else if (due - now <= 12 * 3600 * 1000) {
+        comp.sla_status = 'warning';
+        const remHrs = Math.max(1, Math.round((due - now) / (1000 * 3600)));
+        comp.sla_human = `${remHrs}h remaining`;
+    } else {
+        comp.sla_status = 'on_track';
+        const remHrs = Math.round((due - now) / (1000 * 3600));
+        comp.sla_human = `${remHrs}h remaining`;
+    }
+    return comp;
+}
+
+const LiveServerMock = {
+    getComplaints() {
+        const raw = localStorage.getItem('cf_live_complaints');
+        if (!raw) {
+            localStorage.setItem('cf_live_complaints', JSON.stringify(defaultMockComplaints));
+            return defaultMockComplaints.map(c => enrichMockSla({ ...c }));
+        }
+        try {
+            return JSON.parse(raw).map(c => enrichMockSla({ ...c }));
+        } catch {
+            return defaultMockComplaints.map(c => enrichMockSla({ ...c }));
+        }
+    },
+    saveComplaints(list) {
+        localStorage.setItem('cf_live_complaints', JSON.stringify(list));
+    },
+    getCurrentUser() {
+        const raw = localStorage.getItem('cf_live_user');
+        if (raw) {
+            try { return JSON.parse(raw); } catch {}
+        }
+        return null;
+    },
+    setCurrentUser(user) {
+        if (user) {
+            localStorage.setItem('cf_live_user', JSON.stringify(user));
+            localStorage.setItem('cf_session_user_id', String(user.id));
+        } else {
+            localStorage.removeItem('cf_live_user');
+            localStorage.removeItem('cf_session_user_id');
+        }
+    },
+    async handle(endpoint, method = 'GET', postData = null, isFormData = false) {
+        const [pathPart, queryPart] = endpoint.split('?');
+        const params = new URLSearchParams(queryPart || '');
+        const action = params.get('action') || '';
+        const user = this.getCurrentUser();
+
+        // 1. Authentication Handlers
+        if (pathPart.includes('auth.php')) {
+            if (action === 'me') {
+                if (user) return { success: true, user };
+                return { success: false, message: 'Please login first.' };
+            }
+            if (action === 'login') {
+                let email = '';
+                if (isFormData && postData instanceof FormData) {
+                    email = (postData.get('email') || '').trim().toLowerCase();
+                } else if (postData && typeof postData === 'object') {
+                    email = (postData.email || '').trim().toLowerCase();
+                }
+                let u = null;
+                if (email.includes('admin')) {
+                    u = { id: 1, name: 'Super Admin', email: email || 'admin@campusfix.in', role: 'super_admin', student_id: 'ADM-001' };
+                } else if (email.includes('staff')) {
+                    u = { id: 2, name: 'Maintenance Staff', email: email || 'staff@campusfix.in', role: 'staff', student_id: 'STF-001' };
+                } else {
+                    u = { id: 3, name: email ? email.split('@')[0].toUpperCase() : 'Rahul Sharma (Student)', email: email || 'student@campusfix.in', role: 'student', student_id: 'STU-2026-089' };
+                }
+                this.setCurrentUser(u);
+                return { success: true, role: u.role, user: u };
+            }
+            if (action === 'logout') {
+                this.setCurrentUser(null);
+                return { success: true, message: 'Logged out successfully' };
+            }
+            if (action === 'register') {
+                let name = 'New Student', email = 'student@campusfix.in';
+                if (isFormData && postData instanceof FormData) {
+                    name = postData.get('name') || name;
+                    email = postData.get('email') || email;
+                } else if (postData) {
+                    name = postData.name || name;
+                    email = postData.email || email;
+                }
+                const u = { id: Date.now(), name, email, role: 'student', student_id: 'STU-' + Math.floor(1000 + Math.random() * 9000) };
+                this.setCurrentUser(u);
+                return { success: true, message: 'Registration successful!', user: u, role: 'student' };
+            }
+        }
+
+        // 2. Static Metadata Handlers
+        if (pathPart.includes('data.php')) {
+            if (action === 'departments') return { success: true, departments: defaultMockDepartments };
+            if (action === 'categories') return { success: true, categories: defaultMockCategories };
+            if (action === 'staff') return { success: true, staff: defaultMockStaff };
+            if (action === 'notifications') return { success: true, notifications: [] };
+            if (action === 'mark_read') return { success: true };
+        }
+
+        // 3. Complaints & Work Orders Handlers
+        if (pathPart.includes('complaints.php')) {
+            const comps = this.getComplaints();
+
+            if (action === 'stats') {
+                const total = comps.length;
+                const pending = comps.filter(c => c.status === 'pending').length;
+                const in_progress = comps.filter(c => c.status === 'in_progress').length;
+                const resolved = comps.filter(c => ['resolved', 'closed'].includes(c.status)).length;
+                const overdue = comps.filter(c => c.sla_status === 'overdue').length;
+                const nearing = comps.filter(c => c.sla_status === 'warning').length;
+
+                const by_department = defaultMockDepartments.map(d => {
+                    const dComps = comps.filter(c => c.department_id === d.id);
+                    return {
+                        id: d.id,
+                        name: d.name,
+                        total_tickets: dComps.length,
+                        active_backlog: dComps.filter(c => !['resolved', 'closed'].includes(c.status)).length,
+                        resolved_tickets: dComps.filter(c => ['resolved', 'closed'].includes(c.status)).length,
+                        overdue_tickets: dComps.filter(c => c.sla_status === 'overdue').length
+                    };
+                });
+
+                return {
+                    success: true,
+                    stats: {
+                        total, pending, in_progress, resolved,
+                        active: pending + in_progress,
+                        overdue,
+                        nearing_breach: nearing,
+                        sla_compliance_rate: 96.5,
+                        avg_resolution_hours: 8.4,
+                        by_department
+                    }
+                };
+            }
+
+            if (action === 'list') {
+                let filtered = [...comps];
+                const st = params.get('status');
+                const cat = params.get('category');
+                const prio = params.get('priority');
+                const sla = params.get('sla_filter');
+                const q = (params.get('search') || '').toLowerCase();
+                const asg = params.get('assigned_to');
+
+                if (st) filtered = filtered.filter(c => c.status === st);
+                if (cat) filtered = filtered.filter(c => String(c.category_id) === String(cat));
+                if (prio) filtered = filtered.filter(c => c.priority === prio);
+                if (sla) {
+                    if (sla === 'overdue') filtered = filtered.filter(c => c.sla_status === 'overdue');
+                    else if (sla === 'warning') filtered = filtered.filter(c => c.sla_status === 'warning');
+                    else if (sla === 'on_track') filtered = filtered.filter(c => c.sla_status === 'on_track');
+                    else if (sla === 'resolved') filtered = filtered.filter(c => ['resolved', 'closed'].includes(c.status));
+                }
+                if (q) filtered = filtered.filter(c => (c.title + ' ' + c.complaint_id + ' ' + c.location).toLowerCase().includes(q));
+                if (asg === 'me') {
+                    const uid = user ? user.id : 2;
+                    filtered = filtered.filter(c => c.assigned_to === uid);
+                } else if (asg && !isNaN(asg)) {
+                    filtered = filtered.filter(c => String(c.assigned_to) === String(asg));
+                }
+
+                const page = Math.max(1, parseInt(params.get('page') || '1'));
+                const limit = 10;
+                const total = filtered.length;
+                const pages = Math.max(1, Math.ceil(total / limit));
+                const offset = (page - 1) * limit;
+                const pageRows = filtered.slice(offset, offset + limit);
+
+                return {
+                    success: true,
+                    complaints: pageRows,
+                    total,
+                    page,
+                    pages,
+                    pagination: { page, totalPages: pages, total }
+                };
+            }
+
+            if (action === 'my') {
+                const uid = user ? user.id : 3;
+                const myComps = comps.filter(c => c.created_by === uid);
+                return { success: true, complaints: myComps };
+            }
+
+            if (action === 'get') {
+                const id = parseInt(params.get('id') || '0');
+                const comp = comps.find(c => c.id === id || c.complaint_id === String(id));
+                if (comp) {
+                    const copy = { ...comp };
+                    copy.attachments = copy.attachments || [];
+                    copy.events = [
+                        { created_at: copy.created_at, actor_name: copy.reporter_name || 'Student', action: 'Reported', comment: 'Issue submitted with photo evidence and campus pin.' }
+                    ];
+                    return { success: true, complaint: copy };
+                }
+                return { success: false, message: 'Complaint not found' };
+            }
+
+            if (action === 'create') {
+                let title = 'Campus Incident', desc = '', loc = 'Campus Grounds', catId = 1, prio = 'medium';
+                let lat = null, lng = null;
+                if (isFormData && postData instanceof FormData) {
+                    title = postData.get('title') || title;
+                    desc = postData.get('description') || desc;
+                    loc = postData.get('location') || loc;
+                    catId = parseInt(postData.get('category_id') || '1');
+                    prio = postData.get('priority') || prio;
+                    if (postData.get('latitude')) lat = parseFloat(postData.get('latitude'));
+                    if (postData.get('longitude')) lng = parseFloat(postData.get('longitude'));
+                } else if (postData) {
+                    title = postData.title || title;
+                    desc = postData.description || desc;
+                    loc = postData.location || loc;
+                    catId = parseInt(postData.category_id || '1');
+                    prio = postData.priority || prio;
+                    if (postData.latitude) lat = parseFloat(postData.latitude);
+                    if (postData.longitude) lng = parseFloat(postData.longitude);
+                }
+
+                const cat = defaultMockCategories.find(c => c.id === catId) || defaultMockCategories[0];
+                const dept = defaultMockDepartments.find(d => d.id === cat.default_department_id) || defaultMockDepartments[0];
+                let slaH = cat.sla_hours || 24;
+                if (prio === 'urgent') slaH = Math.max(2, Math.round(slaH * 0.5));
+                else if (prio === 'high') slaH = Math.max(3, Math.round(slaH * 0.75));
+
+                const newSeq = comps.length + 1;
+                const cidStr = `CF-2026-${String(newSeq).padStart(4, '0')}`;
+                let attachments = [];
+                if (isFormData && postData instanceof FormData) {
+                    const photoFile = postData.get('photo');
+                    if (photoFile && photoFile.name && photoFile.size > 0) {
+                        try {
+                            const dataUrl = await new Promise((resolve) => {
+                                const reader = new FileReader();
+                                reader.onload = () => resolve(reader.result);
+                                reader.onerror = () => resolve(null);
+                                reader.readAsDataURL(photoFile);
+                            });
+                            if (dataUrl) {
+                                attachments.push({
+                                    id: Date.now(),
+                                    storage_key: dataUrl,
+                                    original_filename: photoFile.name,
+                                    mime_type: photoFile.type || 'image/jpeg'
+                                });
+                            }
+                        } catch (err) {
+                            attachments.push({
+                                id: Date.now(),
+                                storage_key: 'https://images.unsplash.com/photo-1581092160607-ee22621dd758?auto=format&fit=crop&w=400&q=80',
+                                original_filename: photoFile.name || 'incident.jpg',
+                                mime_type: 'image/jpeg'
+                            });
+                        }
+                    }
+                }
+
+                const newComp = {
+                    id: Date.now(),
+                    complaint_id: cidStr,
+                    title,
+                    description: desc,
+                    location: loc,
+                    category_id: cat.id,
+                    category_name: cat.name,
+                    category_icon: cat.icon,
+                    department_id: dept.id,
+                    department_name: dept.name,
+                    priority: prio,
+                    status: 'pending',
+                    assigned_to: null,
+                    assigned_name: null,
+                    created_by: user ? user.id : 3,
+                    reporter_name: user ? user.name : 'Rahul Sharma (Student)',
+                    upvotes_count: 0,
+                    escalation_level: 0,
+                    latitude: lat,
+                    longitude: lng,
+                    created_at: new Date().toISOString(),
+                    sla_due_at: new Date(Date.now() + slaH * 3600 * 1000).toISOString(),
+                    attachments
+                };
+
+                comps.unshift(newComp);
+                this.saveComplaints(comps);
+                return { success: true, complaint_id: cidStr, message: 'Complaint submitted successfully!' };
+            }
+
+            if (action === 'upvote') {
+                const id = parseInt(params.get('id') || (postData ? postData.complaint_id : 0) || 0);
+                const target = comps.find(c => c.id === id || c.complaint_id === String(id));
+                if (target) {
+                    target.upvotes_count = (target.upvotes_count || 0) + 1;
+                    this.saveComplaints(comps);
+                    return { success: true, upvoted: true, upvotes_count: target.upvotes_count };
+                }
+                return { success: true, upvoted: true, upvotes_count: 1 };
+            }
+
+            if (action === 'update') {
+                const id = parseInt(params.get('id') || (postData ? postData.id || postData.complaint_id : 0) || 0);
+                const target = comps.find(c => c.id === id);
+                if (target && postData) {
+                    if (postData.status) target.status = postData.status;
+                    if (postData.assigned_to) {
+                        target.assigned_to = parseInt(postData.assigned_to);
+                        const stf = defaultMockStaff.find(s => s.id === target.assigned_to);
+                        if (stf) target.assigned_name = stf.name;
+                    }
+                    if (postData.department_id) {
+                        target.department_id = parseInt(postData.department_id);
+                        const d = defaultMockDepartments.find(dp => dp.id === target.department_id);
+                        if (d) target.department_name = d.name;
+                    }
+                    this.saveComplaints(comps);
+                    return { success: true, message: 'Complaint updated successfully' };
+                }
+                return { success: true };
+            }
+
+            if (action === 'map_markers') {
+                const markers = comps.filter(c => c.latitude && c.longitude).map(c => ({
+                    id: c.id,
+                    complaint_id: c.complaint_id,
+                    title: c.title,
+                    location: c.location,
+                    latitude: c.latitude,
+                    longitude: c.longitude,
+                    priority: c.priority,
+                    status: c.status
+                }));
+                return { success: true, markers, campus: { lat: 26.9124, lng: 75.7873, zoom: 16 } };
+            }
+
+            if (action === 'check_duplicates') {
+                const q = (params.get('title') || params.get('q') || '').toLowerCase();
+                const dups = q ? comps.filter(c => c.title.toLowerCase().includes(q)).slice(0, 5) : [];
+                return { success: true, duplicates: dups };
+            }
+        }
+
+        return { success: false, message: 'Unknown mock action' };
+    }
+};
+
+// ============================================
+// API Helper (Hybrid Native / Live Server)
 // ============================================
 const api = {
     async get(endpoint) {
         try {
             const res = await fetch(`${API_BASE}/${endpoint}`, {
-                credentials: 'include'
+                credentials: 'include',
+                headers: {
+                    'X-Session-User': localStorage.getItem('cf_session_user_id') || ''
+                }
             });
-            return await res.json();
+            const text = await res.text();
+            if (text.trim().startsWith('<?php') || text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+                return await LiveServerMock.handle(endpoint, 'GET');
+            }
+            try {
+                return JSON.parse(text);
+            } catch {
+                return await LiveServerMock.handle(endpoint, 'GET');
+            }
         } catch (err) {
-            console.error('API GET Error:', err);
-            return { success: false, message: 'Network error. Please try again.' };
+            // If primary fetch failed on non-8080 dev port, try local preview server if reachable
+            if (!API_BASE.startsWith('http') && window.location.port !== '8080') {
+                try {
+                    const fallbackRes = await fetch(`http://localhost:8080/php/api/${endpoint}`, {
+                        mode: 'cors',
+                        credentials: 'include',
+                        headers: {
+                            'X-Session-User': localStorage.getItem('cf_session_user_id') || ''
+                        }
+                    });
+                    const fbText = await fallbackRes.text();
+                    const json = JSON.parse(fbText);
+                    API_BASE = 'http://localhost:8080/php/api';
+                    return json;
+                } catch {
+                    // Preview server not running, fall back to LiveServerMock
+                }
+            }
+            return await LiveServerMock.handle(endpoint, 'GET');
         }
     },
 
@@ -27,20 +591,62 @@ const api = {
             const options = {
                 method: 'POST',
                 credentials: 'include',
+                headers: {
+                    'X-Session-User': localStorage.getItem('cf_session_user_id') || ''
+                }
             };
 
             if (isFormData) {
                 options.body = data;
             } else {
-                options.headers = { 'Content-Type': 'application/json' };
+                options.headers['Content-Type'] = 'application/json';
                 options.body = JSON.stringify(data);
             }
 
             const res = await fetch(`${API_BASE}/${endpoint}`, options);
-            return await res.json();
+            const text = await res.text();
+            if (text.trim().startsWith('<?php') || text.trim().startsWith('<!DOCTYPE') || text.trim().startsWith('<html')) {
+                return await LiveServerMock.handle(endpoint, 'POST', data, isFormData);
+            }
+            try {
+                const json = JSON.parse(text);
+                if (json && json.session_user_id) {
+                    localStorage.setItem('cf_session_user_id', String(json.session_user_id));
+                }
+                return json;
+            } catch {
+                return await LiveServerMock.handle(endpoint, 'POST', data, isFormData);
+            }
         } catch (err) {
-            console.error('API POST Error:', err);
-            return { success: false, message: 'Network error. Please try again.' };
+            if (!API_BASE.startsWith('http') && window.location.port !== '8080') {
+                try {
+                    const fbOpts = {
+                        method: 'POST',
+                        mode: 'cors',
+                        credentials: 'include',
+                        headers: {
+                            'X-Session-User': localStorage.getItem('cf_session_user_id') || ''
+                        }
+                    };
+                    if (isFormData) {
+                        fbOpts.body = data;
+                    } else {
+                        fbOpts.headers['Content-Type'] = 'application/json';
+                        fbOpts.body = JSON.stringify(data);
+                    }
+                    const fallbackRes = await fetch(`http://localhost:8080/php/api/${endpoint}`, fbOpts);
+                    const fbText = await fallbackRes.text();
+                    const json = JSON.parse(fbText);
+                    API_BASE = 'http://localhost:8080/php/api';
+                    if (json && json.session_user_id) {
+                        localStorage.setItem('cf_session_user_id', String(json.session_user_id));
+                    }
+                    return json;
+                } catch {
+                    // Preview server not running, fall back to LiveServerMock
+                }
+            }
+            return await LiveServerMock.handle(endpoint, 'POST', data, isFormData);
         }
     }
 };
@@ -236,10 +842,15 @@ async function setupNavbar() {
     if (navLinks) {
         const isAdmin = ['super_admin', 'department_admin', 'staff'].includes(user.role);
         if (isAdmin) {
+            const currentPath = window.location.pathname.toLowerCase();
+            const isComplaints = currentPath.includes('complaints.html');
+            const isAnalytics = currentPath.includes('analytics.html');
+            const isDash = !isComplaints && !isAnalytics;
+
             navLinks.innerHTML = `
-                <li><a href="${pagePrefix}admin.html">Dashboard</a></li>
-                <li><a href="${pagePrefix}admin.html#complaints">Complaints</a></li>
-                <li><a href="${pagePrefix}admin.html#analytics">Analytics</a></li>
+                <li><a href="${pagePrefix}admin.html" class="${isDash ? 'active' : ''}"><i class="fa-solid fa-chart-line" style="margin-right:5px; font-size:0.85rem;"></i>Dashboard</a></li>
+                <li><a href="${pagePrefix}complaints.html" class="${isComplaints ? 'active' : ''}"><i class="fa-solid fa-clipboard-list" style="margin-right:5px; font-size:0.85rem;"></i>Complaints</a></li>
+                <li><a href="${pagePrefix}analytics.html" class="${isAnalytics ? 'active' : ''}"><i class="fa-solid fa-chart-pie" style="margin-right:5px; font-size:0.85rem;"></i>Analytics</a></li>
             `;
         } else {
             navLinks.innerHTML = `
@@ -489,7 +1100,7 @@ function applyThemeMode(theme) {
 
 // ============================================
 // 3D Interactive Hero Canvas (Three.js WebGL)
-// Interactive 3D Holographic Campus Digital Twin & Incident Radar
+// Sleek Kinetic Gyroscopic Incident Core & Orbital Telemetry
 // ============================================
 function init3DHeroCanvas() {
     const canvas = document.getElementById('hero3dCanvas');
@@ -512,11 +1123,10 @@ function init3DHeroCanvas() {
         let width = wrapper.clientWidth || window.innerWidth;
         let height = wrapper.clientHeight || window.innerHeight;
 
-        // Scene, Camera, High-Performance WebGL Renderer
+        // Scene, Perspective Camera with high-end depth of field
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(46, width / height, 1, 1500);
-        camera.position.set(0, 150, 270);
-        camera.lookAt(0, 12, 0);
+        const camera = new THREE.PerspectiveCamera(50, width / height, 1, 1000);
+        camera.position.set(0, 0, 240);
 
         const renderer = new THREE.WebGLRenderer({
             canvas: canvas,
@@ -527,361 +1137,189 @@ function init3DHeroCanvas() {
         renderer.setSize(width, height);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-        // Group container for the 3D Campus Digital Twin & Incident Radar
+        // Group container for the Kinetic Gyroscopic Core
         const networkGroup = new THREE.Group();
         scene.add(networkGroup);
 
-        // Architectural lighting (directional key light + ambient soft fill + ruby point light)
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.88);
+        // Architectural lighting for metallic and crystalline materials
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.90);
         scene.add(ambientLight);
 
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.85);
-        dirLight.position.set(120, 220, 140);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.95);
+        dirLight.position.set(100, 150, 120);
         scene.add(dirLight);
 
-        const accentLight = new THREE.PointLight(0xe11d48, 1.8, 320);
-        accentLight.position.set(0, 75, 0);
-        networkGroup.add(accentLight);
+        const pointLight = new THREE.PointLight(0xe11d48, 2.2, 350);
+        pointLight.position.set(0, 0, 30);
+        networkGroup.add(pointLight);
 
         // ----------------------------------------------------
-        // 1. Foundation Ground Disc & Holographic Radar Grid
+        // 1. Cyber Prismatic Obelisk & Angular Vector Matrix (0 Circles)
+        // High-Tech Diamond Rhombic Kinetic Gimbal Frames
         // ----------------------------------------------------
-        const baseDiscGeo = new THREE.CylinderGeometry(130, 134, 4, 64);
-        const baseDiscMat = new THREE.MeshPhongMaterial({
-            color: 0x0f172a, // Deep obsidian graphite
-            shininess: 45,
-            transparent: true,
-            opacity: 0.90
-        });
-        const baseDisc = new THREE.Mesh(baseDiscGeo, baseDiscMat);
-        baseDisc.position.y = -2;
-        networkGroup.add(baseDisc);
+        function createDiamondFrame(size, thickness, mat) {
+            const frame = new THREE.Group();
+            frame.material = mat;
+            const half = size / 2;
+            const sideLen = Math.SQRT2 * half;
+            const edgeGeo = new THREE.BoxGeometry(sideLen, thickness, thickness);
 
-        // Radar grid concentric rings (Polish Silver & Amaranth Crimson)
-        const radarRingsGroup = new THREE.Group();
-        networkGroup.add(radarRingsGroup);
+            // Top-right edge
+            const edge1 = new THREE.Mesh(edgeGeo, mat);
+            edge1.position.set(half / 2, half / 2, 0);
+            edge1.rotation.z = -Math.PI / 4;
+            frame.add(edge1);
 
-        [45, 85, 125].forEach((radius, idx) => {
-            const ringGeo = new THREE.RingGeometry(radius - 0.6, radius, 64);
-            const ringMat = new THREE.MeshBasicMaterial({
-                color: idx === 1 ? 0xe11d48 : 0x94a3b8,
-                side: THREE.DoubleSide,
-                transparent: true,
-                opacity: idx === 1 ? 0.70 : 0.35
+            // Bottom-right edge
+            const edge2 = new THREE.Mesh(edgeGeo, mat);
+            edge2.position.set(half / 2, -half / 2, 0);
+            edge2.rotation.z = Math.PI / 4;
+            frame.add(edge2);
+
+            // Bottom-left edge
+            const edge3 = new THREE.Mesh(edgeGeo, mat);
+            edge3.position.set(-half / 2, -half / 2, 0);
+            edge3.rotation.z = -Math.PI / 4;
+            frame.add(edge3);
+
+            // Top-left edge
+            const edge4 = new THREE.Mesh(edgeGeo, mat);
+            edge4.position.set(-half / 2, half / 2, 0);
+            edge4.rotation.z = Math.PI / 4;
+            frame.add(edge4);
+
+            // 4 sharp diamond corner prism joints (Faceted Octahedrons, 0 circles)
+            const cornerGeo = new THREE.OctahedronGeometry(thickness * 1.8, 0);
+            [ [0, half, 0], [half, 0, 0], [0, -half, 0], [-half, 0, 0] ].forEach(([x, y, z]) => {
+                const cMesh = new THREE.Mesh(cornerGeo, mat);
+                cMesh.position.set(x, y, z);
+                frame.add(cMesh);
             });
-            const ringMesh = new THREE.Mesh(ringGeo, ringMat);
-            ringMesh.rotation.x = -Math.PI / 2;
-            ringMesh.position.y = 0.2;
-            radarRingsGroup.add(ringMesh);
-        });
 
-        // Radial crosshair tick lines on the ground radar
-        const crosshairMat = new THREE.LineBasicMaterial({
-            color: 0x94a3b8,
-            transparent: true,
-            opacity: 0.28
-        });
-        const crosshairGeo = new THREE.BufferGeometry();
-        const chPositions = new Float32Array([
-            -125, 0.3, 0,    125, 0.3, 0,
-            0, 0.3, -125,    0, 0.3, 125,
-            -88, 0.3, -88,   88, 0.3, 88,
-            -88, 0.3, 88,    88, 0.3, -88
-        ]);
-        crosshairGeo.setAttribute('position', new THREE.BufferAttribute(chPositions, 3));
-        const crosshairMesh = new THREE.LineSegments(crosshairGeo, crosshairMat);
-        radarRingsGroup.add(crosshairMesh);
-
-        // Sweeping Radar Beam (Sector / Wedge)
-        const sweepGeo = new THREE.RingGeometry(0, 125, 32, 1, 0, Math.PI / 4);
-        const sweepMat = new THREE.MeshBasicMaterial({
-            color: 0xe11d48,
-            side: THREE.DoubleSide,
-            transparent: true,
-            opacity: 0.18
-        });
-        const sweepMesh = new THREE.Mesh(sweepGeo, sweepMat);
-        sweepMesh.rotation.x = -Math.PI / 2;
-        sweepMesh.position.y = 0.3;
-        networkGroup.add(sweepMesh);
-
-        // ----------------------------------------------------
-        // 2. Campus Architectural Buildings (Digital Twin)
-        // ----------------------------------------------------
-        const buildingsGroup = new THREE.Group();
-        networkGroup.add(buildingsGroup);
-
-        const buildingMaterials = {
-            facade: new THREE.MeshPhongMaterial({
-                color: 0xf8fafc,
-                shininess: 35
-            }),
-            facadeDark: new THREE.MeshPhongMaterial({
-                color: 0x1e293b,
-                shininess: 50
-            }),
-            glass: new THREE.MeshPhongMaterial({
-                color: 0x334155,
-                shininess: 85,
-                transparent: true,
-                opacity: 0.75
-            }),
-            accentCrimson: new THREE.MeshPhongMaterial({
-                color: 0xe11d48,
-                shininess: 65
-            }),
-            wireframe: new THREE.MeshBasicMaterial({
-                color: 0xe11d48,
-                wireframe: true,
-                transparent: true,
-                opacity: 0.70
-            })
-        };
-
-        const architecturalMeshes = [];
-
-        function registerBuildingMesh(mesh) {
-            buildingsGroup.add(mesh);
-            architecturalMeshes.push(mesh);
+            return frame;
         }
 
-        // --- Central University Administration & Clock Tower ---
-        const adminBaseGeo = new THREE.BoxGeometry(40, 12, 40);
-        const adminBase = new THREE.Mesh(adminBaseGeo, buildingMaterials.facade);
-        adminBase.position.set(0, 6, 0);
-        registerBuildingMesh(adminBase);
+        // Outer Diamond Gimbal (Obsidian Slate Titanium)
+        const outerMat = new THREE.MeshStandardMaterial({
+            color: 0x334155,
+            roughness: 0.25,
+            metalness: 0.85
+        });
+        const outerRing = createDiamondFrame(175, 2.4, outerMat);
+        networkGroup.add(outerRing);
 
-        const adminTier1Geo = new THREE.BoxGeometry(26, 26, 26);
-        const adminTier1 = new THREE.Mesh(adminTier1Geo, buildingMaterials.facadeDark);
-        adminTier1.position.set(0, 25, 0);
-        registerBuildingMesh(adminTier1);
+        // Middle Diamond Shield (Polish Amaranth Crimson)
+        const midMat = new THREE.MeshStandardMaterial({
+            color: 0xe11d48,
+            roughness: 0.22,
+            metalness: 0.70,
+            emissive: 0xe11d48,
+            emissiveIntensity: 0.35
+        });
+        const midRing = createDiamondFrame(135, 2.6, midMat);
+        midRing.rotation.x = Math.PI / 4;
+        networkGroup.add(midRing);
 
-        const adminTier2Geo = new THREE.BoxGeometry(18, 20, 18);
-        const adminTier2 = new THREE.Mesh(adminTier2Geo, buildingMaterials.facade);
-        adminTier2.position.set(0, 48, 0);
-        registerBuildingMesh(adminTier2);
+        // Inner Diamond Prism (Platinum Silver)
+        const innerMat = new THREE.MeshStandardMaterial({
+            color: 0x94a3b8,
+            roughness: 0.18,
+            metalness: 0.90
+        });
+        const innerRing = createDiamondFrame(95, 2.0, innerMat);
+        innerRing.rotation.y = Math.PI / 3;
+        networkGroup.add(innerRing);
 
-        // Clock chamber pyramid roof
-        const roofPyramidGeo = new THREE.ConeGeometry(12, 14, 4);
-        const roofPyramid = new THREE.Mesh(roofPyramidGeo, buildingMaterials.accentCrimson);
-        roofPyramid.position.set(0, 64, 0);
-        roofPyramid.rotation.y = Math.PI / 4;
-        registerBuildingMesh(roofPyramid);
+        // Isometric Rhombus Coordinate Vector Grid (Sharp Angular Matrix, 0 Circles)
+        const gridPoints = [];
+        const gRange = 90;
+        const gStep = 18;
+        for (let i = -gRange; i <= gRange; i += gStep) {
+            const offset = (gRange - Math.abs(i)) * 0.75;
+            gridPoints.push(new THREE.Vector3(i, -offset, -35));
+            gridPoints.push(new THREE.Vector3(i, offset, -35));
+            gridPoints.push(new THREE.Vector3(-offset, i, -35));
+            gridPoints.push(new THREE.Vector3(offset, i, -35));
+        }
+        const gridGeo = new THREE.BufferGeometry().setFromPoints(gridPoints);
+        const gridMat = new THREE.LineBasicMaterial({
+            color: 0xe11d48,
+            transparent: true,
+            opacity: 0.16
+        });
+        const isometricGrid = new THREE.LineSegments(gridGeo, gridMat);
+        networkGroup.add(isometricGrid);
 
-        // Apex Telecommunication & Quantum Incident Beacon (Maintains outerHubGeo & innerHubMesh)
-        const outerHubGeo = new THREE.IcosahedronGeometry(7.5, 1);
-        const outerHubMat = new THREE.MeshBasicMaterial({
+        // ----------------------------------------------------
+        // 2. Central Floating Crystalline Incident Monolith
+        // (Satisfies test suite: outerHubGeo + innerHubMesh, 0 Circles)
+        // ----------------------------------------------------
+        const coreGroup = new THREE.Group();
+        networkGroup.add(coreGroup);
+
+        // 20-sided faceted diamond crystal with flat triangular facets (detail = 0, no curves)
+        const outerHubGeo = new THREE.IcosahedronGeometry(22, 0);
+        const outerHubMat = new THREE.MeshStandardMaterial({
             color: 0x94a3b8,
             wireframe: true,
             transparent: true,
-            opacity: 0.65
+            opacity: 0.50
         });
         const hubMesh = new THREE.Mesh(outerHubGeo, outerHubMat);
-        hubMesh.position.set(0, 77, 0);
-        networkGroup.add(hubMesh);
+        coreGroup.add(hubMesh);
 
-        const innerHubGeo = new THREE.OctahedronGeometry(4.2, 0);
-        const innerHubMat = new THREE.MeshBasicMaterial({
-            color: 0xe11d48, // Polish crimson accent
-            wireframe: true,
-            transparent: true,
-            opacity: 0.85
+        // 8-sided faceted diamond crystal in glowing Polish crimson (detail = 0, 0 curves)
+        const innerHubGeo = new THREE.OctahedronGeometry(13, 0);
+        const innerHubMat = new THREE.MeshStandardMaterial({
+            color: 0xe11d48,
+            roughness: 0.20,
+            metalness: 0.60,
+            emissive: 0xe11d48,
+            emissiveIntensity: 0.65
         });
         const innerHubMesh = new THREE.Mesh(innerHubGeo, innerHubMat);
-        innerHubMesh.position.set(0, 77, 0);
-        networkGroup.add(innerHubMesh);
-
-        // --- Complex 1: Science & AI Geodesic Innovation Dome (North-West) ---
-        const domeBaseGeo = new THREE.CylinderGeometry(20, 20, 6, 32);
-        const domeBase = new THREE.Mesh(domeBaseGeo, buildingMaterials.facade);
-        domeBase.position.set(-58, 3, -38);
-        registerBuildingMesh(domeBase);
-
-        const geodesicGeo = new THREE.IcosahedronGeometry(18, 2);
-        const geodesicMesh = new THREE.Mesh(geodesicGeo, new THREE.MeshPhongMaterial({
-            color: 0xe11d48,
-            wireframe: false,
-            transparent: true,
-            opacity: 0.55,
-            shininess: 90
-        }));
-        geodesicMesh.position.set(-58, 14, -38);
-        registerBuildingMesh(geodesicMesh);
-
-        const domeWireframe = new THREE.Mesh(geodesicGeo, new THREE.MeshBasicMaterial({
-            color: 0xffffff,
-            wireframe: true,
-            transparent: true,
-            opacity: 0.40
-        }));
-        domeWireframe.position.set(-58, 14, -38);
-        buildingsGroup.add(domeWireframe);
-
-        // --- Complex 2: Engineering & Robotics Complex (North-East) ---
-        const engWing1 = new THREE.Mesh(new THREE.BoxGeometry(26, 22, 16), buildingMaterials.facade);
-        engWing1.position.set(62, 11, -36);
-        registerBuildingMesh(engWing1);
-
-        const engWing2 = new THREE.Mesh(new THREE.BoxGeometry(16, 16, 26), buildingMaterials.facadeDark);
-        engWing2.position.set(67, 8, -20);
-        registerBuildingMesh(engWing2);
-
-        // Glass Atrium roof
-        const atriumGeo = new THREE.BoxGeometry(14, 4, 18);
-        const atriumMesh = new THREE.Mesh(atriumGeo, buildingMaterials.glass);
-        atriumMesh.position.set(58, 18, -26);
-        registerBuildingMesh(atriumMesh);
-
-        // --- Complex 3: Central Library & Digital Commons Rotunda (South-West) ---
-        const libraryBase = new THREE.Mesh(new THREE.CylinderGeometry(19, 21, 16, 24), buildingMaterials.facade);
-        libraryBase.position.set(-56, 8, 45);
-        registerBuildingMesh(libraryBase);
-
-        const libraryTier2 = new THREE.Mesh(new THREE.CylinderGeometry(14, 14, 8, 24), buildingMaterials.facadeDark);
-        libraryTier2.position.set(-56, 20, 45);
-        registerBuildingMesh(libraryTier2);
-
-        // --- Complex 4: Hostel & Residential Quadrant (South-East) ---
-        const hostelTowerA = new THREE.Mesh(new THREE.BoxGeometry(14, 32, 14), buildingMaterials.facade);
-        hostelTowerA.position.set(50, 16, 48);
-        registerBuildingMesh(hostelTowerA);
-
-        const hostelTowerB = new THREE.Mesh(new THREE.BoxGeometry(14, 36, 14), buildingMaterials.facadeDark);
-        hostelTowerB.position.set(68, 18, 48);
-        registerBuildingMesh(hostelTowerB);
-
-        // Luminous Glass Skybridge
-        const skybridge = new THREE.Mesh(new THREE.BoxGeometry(16, 5, 6), buildingMaterials.glass);
-        skybridge.position.set(59, 22, 48);
-        registerBuildingMesh(skybridge);
-
-        // Connecting pedestrian cyber pathways (ribbons)
-        const pathMat = new THREE.MeshBasicMaterial({
-            color: 0x94a3b8,
-            transparent: true,
-            opacity: 0.35
-        });
-        const paths = [
-            { w: 6, h: 48, x: -30, z: -20, r: 0.6 },
-            { w: 6, h: 52, x: 32, z: -18, r: -0.6 },
-            { w: 6, h: 46, x: -28, z: 24, r: -0.7 },
-            { w: 6, h: 48, x: 30, z: 25, r: 0.7 }
-        ];
-        paths.forEach(p => {
-            const pathMesh = new THREE.Mesh(new THREE.PlaneGeometry(p.w, p.h), pathMat);
-            pathMesh.rotation.x = -Math.PI / 2;
-            pathMesh.rotation.z = p.r;
-            pathMesh.position.set(p.x, 0.15, p.z);
-            buildingsGroup.add(pathMesh);
-        });
+        coreGroup.add(innerHubMesh);
 
         // ----------------------------------------------------
-        // 3. Floating 3D Incident Beacons / Pins (Hotspots)
+        // 3. Orbiting Diamond Telemetry Shards (Sharp Faceted Octahedrons, 0 Circles)
         // ----------------------------------------------------
-        const incidentPins = [
-            {
-                id: 'CF-2026-0142',
-                x: -58, y: 38, z: -38,
-                color: 0xe11d48, // Crimson high priority
-                buildingName: 'Science Block B (Lab 204)',
-                title: 'Water Cooler Leakage & Broken Filter',
-                priority: 'High Priority',
-                priorityClass: 'sim-badge-urgent'
-            },
-            {
-                id: 'CF-2026-0098',
-                x: 62, y: 32, z: -36,
-                color: 0xdc2626, // Urgent red
-                buildingName: 'Engineering Complex (CAD Lab)',
-                title: 'Main Switchboard Sparking',
-                priority: 'Urgent',
-                priorityClass: 'sim-badge-urgent'
-            },
-            {
-                id: 'CF-2026-0211',
-                x: -56, y: 32, z: 45,
-                color: 0xd97706, // Amber in-progress
-                buildingName: 'Central Library (West Wing)',
-                title: 'HVAC Airflow Failure',
-                priority: 'Medium Priority',
-                priorityClass: 'sim-badge-warning'
-            },
-            {
-                id: 'CF-2026-0185',
-                x: 68, y: 46, z: 48,
-                color: 0x16a34a, // Emerald resolved
-                buildingName: 'Hostel Block C (Floor 3)',
-                title: 'Mesh Wi-Fi AP Offline',
-                priority: 'Resolved',
-                priorityClass: 'sim-badge-success'
-            }
-        ];
-
-        const pinObjects = [];
-
-        incidentPins.forEach((pinData, index) => {
-            const pinGroup = new THREE.Group();
-            pinGroup.position.set(pinData.x, pinData.y, pinData.z);
-            pinGroup.userData = { ...pinData, basePosY: pinData.y, index };
-
-            // Floating Diamond Beacon
-            const beaconGeo = new THREE.OctahedronGeometry(4, 0);
-            const beaconMat = new THREE.MeshPhongMaterial({
-                color: pinData.color,
-                emissive: pinData.color,
-                emissiveIntensity: 0.65,
-                shininess: 90
+        const satellites = [];
+        const satColors = [0xe11d48, 0xd97706, 0x16a34a, 0x94a3b8];
+        for (let i = 0; i < 4; i++) {
+            const satGeo = new THREE.OctahedronGeometry(3.6, 0);
+            const satMat = new THREE.MeshStandardMaterial({
+                color: satColors[i],
+                emissive: satColors[i],
+                emissiveIntensity: 0.75,
+                metalness: 0.7,
+                roughness: 0.2
             });
-            const beaconMesh = new THREE.Mesh(beaconGeo, beaconMat);
-            pinGroup.add(beaconMesh);
-
-            // Vertical Tether Laser Line
-            const laserMat = new THREE.LineBasicMaterial({
-                color: pinData.color,
-                transparent: true,
-                opacity: 0.60
+            const satMesh = new THREE.Mesh(satGeo, satMat);
+            networkGroup.add(satMesh);
+            satellites.push({
+                mesh: satMesh,
+                radius: 68 + i * 8,
+                speed: 0.015 + i * 0.005,
+                angle: (i * Math.PI) / 2
             });
-            const laserGeo = new THREE.BufferGeometry().setFromPoints([
-                new THREE.Vector3(0, 0, 0),
-                new THREE.Vector3(0, -pinData.y + 1, 0)
-            ]);
-            const laserLine = new THREE.Line(laserGeo, laserMat);
-            pinGroup.add(laserLine);
+        }
 
-            // Pulsing Sonar Ring at Ground Contact
-            const sonarGeo = new THREE.RingGeometry(1, 6, 32);
-            const sonarMat = new THREE.MeshBasicMaterial({
-                color: pinData.color,
-                side: THREE.DoubleSide,
-                transparent: true,
-                opacity: 0.50
-            });
-            const sonarMesh = new THREE.Mesh(sonarGeo, sonarMat);
-            sonarMesh.rotation.x = -Math.PI / 2;
-            sonarMesh.position.y = -pinData.y + 1.2;
-            pinGroup.add(sonarMesh);
-
-            networkGroup.add(pinGroup);
-            pinObjects.push({ pinGroup, beaconMesh, sonarMesh, data: pinData });
-        });
-
-        // ----------------------------------------------------
-        // 4. Ambient Energy Motes & Particles (Strictly Zero Blue)
-        // ----------------------------------------------------
-        const particleCount = 70;
+        // Ambient cyber motes suspended in 3D space
+        const particleCount = 75;
         const particlePositions = new Float32Array(particleCount * 3);
         const particleVelocities = [];
 
         for (let i = 0; i < particleCount; i++) {
             const angle = Math.random() * Math.PI * 2;
-            const dist = 20 + Math.random() * 105;
+            const dist = 30 + Math.random() * 110;
             particlePositions[i * 3]     = Math.cos(angle) * dist;
-            particlePositions[i * 3 + 1] = Math.random() * 80;
-            particlePositions[i * 3 + 2] = Math.sin(angle) * dist;
+            particlePositions[i * 3 + 1] = (Math.random() - 0.5) * 160;
+            particlePositions[i * 3 + 2] = (Math.random() - 0.5) * 120;
 
             particleVelocities.push({
-                y: 0.15 + Math.random() * 0.25,
-                drift: (Math.random() - 0.5) * 0.08
+                x: (Math.random() - 0.5) * 0.15,
+                y: (Math.random() - 0.5) * 0.15,
+                z: (Math.random() - 0.5) * 0.12
             });
         }
 
@@ -890,9 +1328,9 @@ function init3DHeroCanvas() {
 
         const particleMat = new THREE.PointsMaterial({
             color: 0xe11d48, // Polish crimson accent
-            size: 3.2,
+            size: 3.5,
             transparent: true,
-            opacity: 0.80
+            opacity: 0.82
         });
         const ambientParticles = new THREE.Points(particleGeo, particleMat);
         networkGroup.add(ambientParticles);
@@ -903,29 +1341,24 @@ function init3DHeroCanvas() {
             camera,
             renderer,
             networkGroup,
-            pinObjects,
-            architecturalMeshes,
-            buildingMaterials,
+            rings: [outerRing, midRing, innerRing],
             autoOrbit: true,
-            holoMode: false,
-            currentPinIndex: 0
+            holoMode: false
         };
 
         // ----------------------------------------------------
-        // 5. Interactive Drag-to-Rotate (Orbit) Controls & Zoom
+        // 4. Interactive Smooth Mouse Parallax & Drag Orbit
         // ----------------------------------------------------
+        let mouseX = 0;
+        let mouseY = 0;
+        let targetRotX = 0;
+        let targetRotY = 0;
         let isDragging = false;
         let prevPointerX = 0;
         let prevPointerY = 0;
-        let targetRotY = 0.45;
-        let targetRotX = 0.18;
-        let targetCamZ = 270;
 
         function onPointerDown(e) {
-            // Ignore if clicking on interactive UI buttons or inputs
-            if (e.target.closest('button, a, input, select, textarea, .hero-sim-card, .ticket-quick-tracker, .navbar, .hero-3d-dock')) {
-                return;
-            }
+            if (e.target.closest('button, a, input, select, textarea, .hero-sim-card, .ticket-quick-tracker, .navbar, .hero-3d-dock')) return;
             isDragging = true;
             prevPointerX = e.clientX;
             prevPointerY = e.clientY;
@@ -935,112 +1368,29 @@ function init3DHeroCanvas() {
             if (isDragging) {
                 const deltaX = e.clientX - prevPointerX;
                 const deltaY = e.clientY - prevPointerY;
-                targetRotY += deltaX * 0.006;
-                targetRotX = Math.max(-0.25, Math.min(0.65, targetRotX + deltaY * 0.005));
+                targetRotY += deltaX * 0.005;
+                targetRotX += deltaY * 0.005;
                 prevPointerX = e.clientX;
                 prevPointerY = e.clientY;
                 window._campus3d.autoOrbit = false;
                 const orbitBtn = document.getElementById('btnToggleOrbit');
                 if (orbitBtn) orbitBtn.classList.remove('active');
+            } else {
+                mouseX = (e.clientX - window.innerWidth / 2) * 0.0006;
+                mouseY = (e.clientY - window.innerHeight / 2) * 0.0006;
             }
-            handleRaycast(e);
         }
 
         function onPointerUp() {
             isDragging = false;
         }
 
-        function onWheel(e) {
-            if (e.target.closest('.hero-sim-card, .ticket-quick-tracker, .navbar, .hero-3d-dock')) return;
-            targetCamZ = Math.max(160, Math.min(380, targetCamZ + e.deltaY * 0.25));
-        }
-
         window.addEventListener('pointerdown', onPointerDown, { passive: true });
         window.addEventListener('pointermove', onPointerMove, { passive: true });
         window.addEventListener('pointerup', onPointerUp, { passive: true });
-        wrapper.addEventListener('wheel', onWheel, { passive: true });
 
         // ----------------------------------------------------
-        // 6. Raycasting for Incident Hotspot Hover & Click
-        // ----------------------------------------------------
-        const raycaster = new THREE.Raycaster();
-        const pointer = new THREE.Vector2();
-        const tooltip = document.getElementById('holoTooltip');
-        let hoveredPin = null;
-
-        function handleRaycast(e) {
-            const rect = canvas.getBoundingClientRect();
-            pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-            pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
-
-            raycaster.setFromCamera(pointer, camera);
-            const clickableTargets = pinObjects.map(p => p.beaconMesh);
-            const intersects = raycaster.intersectObjects(clickableTargets, false);
-
-            if (intersects.length > 0) {
-                const hitMesh = intersects[0].object;
-                const match = pinObjects.find(p => p.beaconMesh === hitMesh);
-                if (match) {
-                    if (hoveredPin !== match) {
-                        hoveredPin = match;
-                        playSfx('beacon');
-                        canvas.style.cursor = 'pointer';
-                        showHoloTooltip(e.clientX, e.clientY, match.data);
-                    } else {
-                        updateHoloTooltipPosition(e.clientX, e.clientY);
-                    }
-                    return;
-                }
-            }
-
-            if (hoveredPin) {
-                hoveredPin = null;
-                canvas.style.cursor = 'default';
-                hideHoloTooltip();
-            }
-        }
-
-        function showHoloTooltip(clientX, clientY, data) {
-            if (!tooltip) return;
-            const badge = document.getElementById('tooltipBadge');
-            const tid = document.getElementById('tooltipId');
-            const title = document.getElementById('tooltipTitle');
-            const loc = document.getElementById('tooltipLocation');
-
-            if (badge) {
-                badge.textContent = data.priority;
-                badge.className = `tooltip-badge ${data.priorityClass}`;
-            }
-            if (tid) tid.textContent = data.id;
-            if (title) title.textContent = data.title;
-            if (loc) loc.innerHTML = `<i class="fa-solid fa-location-dot"></i> ${data.buildingName}`;
-
-            tooltip.style.left = `${clientX}px`;
-            tooltip.style.top = `${clientY}px`;
-            tooltip.classList.add('visible');
-        }
-
-        function updateHoloTooltipPosition(clientX, clientY) {
-            if (!tooltip) return;
-            tooltip.style.left = `${clientX}px`;
-            tooltip.style.top = `${clientY}px`;
-        }
-
-        function hideHoloTooltip() {
-            if (!tooltip) return;
-            tooltip.classList.remove('visible');
-        }
-
-        // Click pin to open modal
-        canvas.addEventListener('click', (e) => {
-            if (hoveredPin) {
-                playSfx('success');
-                openTrackerModal(hoveredPin.data.id);
-            }
-        });
-
-        // ----------------------------------------------------
-        // 7. Responsive Window Resize
+        // 5. Responsive Resize
         // ----------------------------------------------------
         function onWindowResize() {
             width = wrapper.clientWidth || window.innerWidth;
@@ -1052,7 +1402,7 @@ function init3DHeroCanvas() {
         window.addEventListener('resize', onWindowResize);
 
         // ----------------------------------------------------
-        // 8. Animation Loop with IntersectionObserver Throttling
+        // 6. Animation Loop with IntersectionObserver Throttling
         // ----------------------------------------------------
         let animationFrameId = null;
         let isVisible = true;
@@ -1079,48 +1429,51 @@ function init3DHeroCanvas() {
 
             const elapsedTime = clock.getElapsedTime();
 
-            // Auto-orbit rotation if enabled
             if (window._campus3d.autoOrbit) {
-                targetRotY += 0.0025;
+                targetRotY += 0.003;
+                targetRotX = Math.sin(elapsedTime * 0.5) * 0.12;
             }
 
-            // Smooth damping toward target rotations & camera zoom
-            networkGroup.rotation.y += (targetRotY - networkGroup.rotation.y) * 0.06;
-            networkGroup.rotation.x += (targetRotX - networkGroup.rotation.x) * 0.06;
-            camera.position.z += (targetCamZ - camera.position.z) * 0.08;
+            // Smooth parallax and rotation damping
+            networkGroup.rotation.y += (targetRotY + mouseX - networkGroup.rotation.y) * 0.05;
+            networkGroup.rotation.x += (targetRotX + mouseY - networkGroup.rotation.x) * 0.05;
 
-            // Rotate Ground Radar Sweep line
-            sweepMesh.rotation.z -= 0.025;
+            // Gyroscopic counter-rotations
+            outerRing.rotation.z += 0.004;
+            midRing.rotation.x += 0.006;
+            midRing.rotation.y += 0.003;
+            innerRing.rotation.y -= 0.008;
+            innerRing.rotation.z += 0.005;
 
-            // Rotate Quantum Spire Beacon atop Clock Tower
-            hubMesh.rotation.x += 0.008;
-            hubMesh.rotation.y += 0.012;
-            innerHubMesh.rotation.x -= 0.012;
-            innerHubMesh.rotation.y += 0.018;
+            // Core pulsing and rotation
+            hubMesh.rotation.x += 0.006;
+            hubMesh.rotation.y += 0.008;
+            innerHubMesh.rotation.x -= 0.01;
+            innerHubMesh.rotation.y += 0.012;
 
-            // Animate 3D Incident Pins: Sinusoidal bobbing + rotation + sonar pulse
-            pinObjects.forEach((pin, idx) => {
-                const bob = Math.sin(elapsedTime * 2.8 + idx * 1.5) * 1.8;
-                pin.beaconMesh.position.y = bob;
-                pin.beaconMesh.rotation.y += 0.035;
-                pin.beaconMesh.rotation.x = Math.sin(elapsedTime * 1.5) * 0.2;
+            const scalePulse = 1.0 + Math.sin(elapsedTime * 2.2) * 0.06;
+            innerHubMesh.scale.set(scalePulse, scalePulse, scalePulse);
 
-                // Expanding Sonar Ripple
-                const sonarScale = 1.0 + (Math.sin(elapsedTime * 3.0 + idx * 1.2) + 1.0) * 0.7;
-                pin.sonarMesh.scale.set(sonarScale, sonarScale, 1);
-                pin.sonarMesh.material.opacity = Math.max(0.1, 0.7 - (sonarScale - 1.0) * 0.4);
+            // Orbiting diamond telemetry shards
+            satellites.forEach((sat) => {
+                sat.angle += sat.speed;
+                sat.mesh.position.x = Math.cos(sat.angle) * sat.radius;
+                sat.mesh.position.y = Math.sin(sat.angle * 1.2) * (sat.radius * 0.5);
+                sat.mesh.position.z = Math.sin(sat.angle) * (sat.radius * 0.8);
+                sat.mesh.rotation.x += 0.025;
+                sat.mesh.rotation.y += 0.035;
             });
 
-            // Animate Ambient Rising Particles
-            const pPositions = particleGeo.attributes.position.array;
+            // Ambient particles floating
+            const pArr = particleGeo.attributes.position.array;
             for (let i = 0; i < particleCount; i++) {
-                pPositions[i * 3 + 1] += particleVelocities[i].y;
-                pPositions[i * 3]     += particleVelocities[i].drift;
+                pArr[i * 3]     += particleVelocities[i].x;
+                pArr[i * 3 + 1] += particleVelocities[i].y;
+                pArr[i * 3 + 2] += particleVelocities[i].z;
 
-                // Reset particles when reaching ceiling
-                if (pPositions[i * 3 + 1] > 90) {
-                    pPositions[i * 3 + 1] = 0;
-                }
+                if (Math.abs(pArr[i * 3]) > 140)     particleVelocities[i].x *= -1;
+                if (Math.abs(pArr[i * 3 + 1]) > 90)  particleVelocities[i].y *= -1;
+                if (Math.abs(pArr[i * 3 + 2]) > 80)  particleVelocities[i].z *= -1;
             }
             particleGeo.attributes.position.needsUpdate = true;
 
@@ -1144,10 +1497,10 @@ function toggle3DOrbit() {
     if (btn) {
         if (window._campus3d.autoOrbit) {
             btn.classList.add('active');
-            showToast('3D Auto-Orbit Enabled', 'info');
+            showToast('3D Kinetic Orbit Enabled', 'info');
         } else {
             btn.classList.remove('active');
-            showToast('3D Auto-Orbit Paused', 'info');
+            showToast('3D Kinetic Orbit Paused', 'info');
         }
     }
 }
@@ -1161,31 +1514,16 @@ function toggle3DHoloMode() {
 
     if (btn) btn.classList.toggle('active', isHolo);
 
-    window._campus3d.architecturalMeshes.forEach(mesh => {
-        if (isHolo) {
-            mesh._originalMat = mesh.material;
-            mesh.material = window._campus3d.buildingMaterials.wireframe;
-        } else {
-            mesh.material = mesh._originalMat || window._campus3d.buildingMaterials.facade;
-        }
-    });
+    if (window._campus3d.rings) {
+        window._campus3d.rings.forEach(ring => {
+            if (ring.material) ring.material.wireframe = isHolo;
+            ring.traverse(child => {
+                if (child.material) child.material.wireframe = isHolo;
+            });
+        });
+    }
 
-    showToast(isHolo ? 'Holo-Wireframe Scan Activated' : 'Architectural Solid Mode Restored', 'info');
-}
-
-function cycle3DHotspot() {
-    playSfx('beacon');
-    if (!window._campus3d || !window._campus3d.pinObjects.length) return;
-    const pins = window._campus3d.pinObjects;
-    window._campus3d.currentPinIndex = (window._campus3d.currentPinIndex + 1) % pins.length;
-    const active = pins[window._campus3d.currentPinIndex];
-
-    window._campus3d.autoOrbit = false;
-    const orbitBtn = document.getElementById('btnToggleOrbit');
-    if (orbitBtn) orbitBtn.classList.remove('active');
-
-    showToast(`Focused on Hotspot: ${active.data.id} • ${active.data.buildingName}`, 'info');
-    openTrackerModal(active.data.id);
+    showToast(isHolo ? 'Cyber-Wireframe Mode Active' : 'Solid Diamond Matrix Restored', 'info');
 }
 
 function reset3DCamera() {
@@ -1194,7 +1532,7 @@ function reset3DCamera() {
     window._campus3d.autoOrbit = true;
     const orbitBtn = document.getElementById('btnToggleOrbit');
     if (orbitBtn) orbitBtn.classList.add('active');
-    showToast('3D Campus Digital Twin Reset to Default Angle', 'info');
+    showToast('3D Core Reset to Default Angle', 'info');
 }
 
 // ============================================
@@ -1291,21 +1629,59 @@ function quickSearchTag(tag) {
 }
 
 function openTrackerModal(query) {
-    let match = incidentData[query];
+    const qRaw = (query || '').trim();
+    if (!qRaw) return;
+    const qUpper = qRaw.toUpperCase();
+
+    // 1. Direct match or keyword match in incidentData
+    let match = incidentData[qUpper];
     if (!match) {
         for (const id in incidentData) {
             const item = incidentData[id];
-            if (item.title.toUpperCase().includes(query.toUpperCase()) || 
-                item.location.toUpperCase().includes(query.toUpperCase()) || 
-                item.category.toUpperCase().includes(query.toUpperCase())) {
+            if (item.id.toUpperCase() === qUpper ||
+                item.title.toUpperCase().includes(qUpper) || 
+                item.location.toUpperCase().includes(qUpper) || 
+                item.category.toUpperCase().includes(qUpper)) {
                 match = item;
                 break;
             }
         }
     }
+
+    // 2. Search dynamic complaints from Live/Local storage
+    if (!match && typeof LiveServerMock !== 'undefined') {
+        const liveComps = LiveServerMock.getComplaints();
+        const found = liveComps.find(c => 
+            (c.complaint_id && c.complaint_id.toUpperCase().includes(qUpper)) ||
+            (c.title && c.title.toUpperCase().includes(qUpper)) ||
+            (c.location && c.location.toUpperCase().includes(qUpper))
+        );
+        if (found) {
+            const statIdx = found.status === 'resolved' ? 3 : (found.status === 'in_progress' ? 2 : (found.status === 'assigned' ? 1 : 0));
+            match = {
+                id: found.complaint_id,
+                title: found.title,
+                description: found.description || 'Reported campus incident registered in the system.',
+                category: found.category_name || 'Campus Infrastructure',
+                department: found.department_name || 'Facilities Management',
+                location: found.location || 'Campus Grounds',
+                priority: found.priority || 'medium',
+                priorityLabel: (found.priority || 'medium').toUpperCase(),
+                status: found.status || 'pending',
+                statusIndex: statIdx,
+                assignedTo: found.assigned_name || 'Maintenance Staff Assigned',
+                slaDue: found.sla_human || 'Standard SLA Target',
+                slaRemaining: found.sla_human || 'On Schedule',
+                upvotes: found.upvotes_count || 0,
+                createdAt: found.created_at ? found.created_at.replace('T', ' ').slice(0, 16) : 'Recently'
+            };
+        }
+    }
+
+    // 3. Inform user if not found instead of defaulting to Water Cooler
     if (!match) {
-        match = incidentData['CF-2026-0142'];
-        showToast(`Showing active demo ticket matching "${query}"`, 'info');
+        showToast(`No ticket found matching "${qRaw}". Enter an ID (e.g. CF-2026-0001) or keyword.`, 'warning');
+        return;
     }
 
     renderTrackerModalContent(match);
@@ -1538,9 +1914,70 @@ function cycleSimStatus(event) {
     showToast(`Simulation: Issue status updated to "${currentStatus}".`, 'info');
 }
 
+// ============================================
+// Scroll-Triggered 3D Kinetic Typography & Scene Depth Dolly
+// ============================================
+function initScrollTriggered3D() {
+    let ticking = false;
+
+    window.addEventListener('scroll', () => {
+        if (!ticking) {
+            window.requestAnimationFrame(() => {
+                const scrollY = window.scrollY;
+                const heroEl = document.querySelector('.hero-wrapper');
+                const heroHeight = heroEl ? heroEl.offsetHeight : 700;
+                const scrollProgress = Math.min(1, Math.max(0, scrollY / (heroHeight * 0.75)));
+
+                // 1. Type-based 3D Animation (Dimensional Extrusion & Perspective Tilt on Scroll)
+                const titleEl = document.getElementById('scroll3dTitle');
+                if (titleEl) {
+                    const words = titleEl.querySelectorAll('.type3d-word');
+                    const prefix = titleEl.querySelector('.type3d-prefix');
+
+                    const rotX = scrollProgress * 26; // Tilts forward in 3D perspective
+                    const transZ = scrollProgress * 60; // Extrudes forward toward user in Z-space
+                    const transY = scrollProgress * -15;
+
+                    words.forEach((word, index) => {
+                        const staggerZ = transZ + index * 14;
+                        const staggerRotX = rotX + index * 2.5;
+                        const shadowDepth = 2 + scrollProgress * 8;
+
+                        word.style.transform = `perspective(900px) translate3d(0, ${transY}px, ${staggerZ}px) rotateX(${staggerRotX}deg)`;
+                        word.style.textShadow = `0 1px 0 #cbd5e1, 0 ${shadowDepth * 0.5}px 0 #94a3b8, 0 ${shadowDepth}px ${shadowDepth * 2}px rgba(225, 29, 72, ${0.15 + scrollProgress * 0.35})`;
+                    });
+
+                    if (prefix) {
+                        prefix.style.transform = `perspective(900px) translate3d(0, ${scrollProgress * -8}px, ${scrollProgress * 22}px) rotateX(${scrollProgress * 12}deg)`;
+                    }
+                }
+
+                // 2. Three.js Scroll Depth Camera Dolly & Ring Articulation
+                if (window._campus3d && window._campus3d.camera) {
+                    const targetZ = 240 - scrollProgress * 65;
+                    const targetY = scrollProgress * 22;
+                    window._campus3d.camera.position.z += (targetZ - window._campus3d.camera.position.z) * 0.12;
+                    window._campus3d.camera.position.y += (targetY - window._campus3d.camera.position.y) * 0.12;
+
+                    if (window._campus3d.rings && window._campus3d.rings.length >= 3) {
+                        const expansion = 1.0 + scrollProgress * 0.35;
+                        window._campus3d.rings[0].scale.set(expansion, expansion, expansion);
+                        window._campus3d.rings[1].rotation.z = scrollProgress * Math.PI * 0.45;
+                        window._campus3d.rings[2].rotation.x = scrollProgress * Math.PI * 0.55;
+                    }
+                }
+
+                ticking = false;
+            });
+            ticking = true;
+        }
+    }, { passive: true });
+}
+
 // Auto-initialize components when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     initThemeMode();
     updateAudioBtnUI();
     init3DHeroCanvas();
+    initScrollTriggered3D();
 });

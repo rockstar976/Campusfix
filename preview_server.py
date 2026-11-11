@@ -200,7 +200,7 @@ class CampusFixHandler(SimpleHTTPRequestHandler):
                 k, v = item.strip().split('=', 1)
                 cookies[k] = v
         
-        user_id = cookies.get('cf_session_user')
+        user_id = cookies.get('cf_session_user') or self.headers.get('X-Session-User')
         if not user_id:
             return None
         
@@ -215,12 +215,29 @@ class CampusFixHandler(SimpleHTTPRequestHandler):
         except Exception:
             return None
 
+    def _send_cors_headers(self):
+        origin = self.headers.get('Origin')
+        if origin:
+            self.send_header('Access-Control-Allow-Origin', origin)
+            self.send_header('Access-Control-Allow-Credentials', 'true')
+        else:
+            self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PUT, DELETE')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Cookie, X-Session-User')
+
+    def do_OPTIONS(self):
+        self.send_response(200)
+        self._send_cors_headers()
+        self.end_headers()
+
     def send_json(self, data, code=200, set_cookie_user_id=None, clear_cookie=False):
         self.send_response(code)
         self.send_header('Content-Type', 'application/json')
-        self.send_header('Access-Control-Allow-Origin', '*')
+        self._send_cors_headers()
         if set_cookie_user_id:
             self.send_header('Set-Cookie', f'cf_session_user={set_cookie_user_id}; Path=/; SameSite=Lax')
+            if isinstance(data, dict):
+                data['session_user_id'] = set_cookie_user_id
         elif clear_cookie:
             self.send_header('Set-Cookie', 'cf_session_user=; Path=/; Max-Age=0')
         self.end_headers()
@@ -348,12 +365,19 @@ class CampusFixHandler(SimpleHTTPRequestHandler):
                 resolved = c.fetchone()[0]
 
                 c.execute("""
-                SELECT d.name as department_name, COUNT(c.id) as active_backlog
+                SELECT 
+                    d.id,
+                    d.name,
+                    COUNT(c.id) as total_tickets,
+                    COALESCE(SUM(CASE WHEN c.status NOT IN ('resolved', 'closed') THEN 1 ELSE 0 END), 0) as active_backlog,
+                    COALESCE(SUM(CASE WHEN c.status IN ('resolved', 'closed') THEN 1 ELSE 0 END), 0) as resolved_tickets,
+                    COALESCE(SUM(CASE WHEN c.status NOT IN ('resolved', 'closed') AND c.sla_due_at IS NOT NULL AND datetime(c.sla_due_at) < datetime('now') THEN 1 ELSE 0 END), 0) as overdue_tickets
                 FROM departments d
-                LEFT JOIN complaints c ON c.department_id = d.id AND c.status NOT IN ('resolved', 'closed')
-                GROUP BY d.id
+                LEFT JOIN complaints c ON c.department_id = d.id
+                GROUP BY d.id, d.name
+                ORDER BY active_backlog DESC, total_tickets DESC
                 """)
-                backlog = [dict(r) for r in c.fetchall()]
+                by_dept = [dict(r) for r in c.fetchall()]
 
                 self.send_json({
                     "success": True,
@@ -363,11 +387,11 @@ class CampusFixHandler(SimpleHTTPRequestHandler):
                         "in_progress": in_prog,
                         "resolved": resolved,
                         "active": pending + in_prog,
-                        "sla_breached": 0,
-                        "sla_compliance": 96.5,
-                        "avg_turnaround_hours": 8.4,
+                        "overdue": 0,
+                        "sla_compliance_rate": 96.5,
+                        "avg_resolution_hours": 8.4,
                         "nearing_breach": 1,
-                        "department_backlog": backlog
+                        "by_department": by_dept
                     }
                 })
             elif action == 'my':
@@ -416,15 +440,71 @@ class CampusFixHandler(SimpleHTTPRequestHandler):
                 else:
                     self.send_json({"success": False, "message": "Complaint not found"}, code=404)
             elif action == 'list':
-                c.execute("""
+                where_clauses = []
+                params = []
+
+                status_f = query.get('status', [''])[0]
+                if status_f:
+                    where_clauses.append("c.status = ?")
+                    params.append(status_f)
+
+                cat_f = query.get('category', [''])[0]
+                if cat_f:
+                    where_clauses.append("c.category_id = ?")
+                    params.append(cat_f)
+
+                priority_f = query.get('priority', [''])[0]
+                if priority_f:
+                    where_clauses.append("c.priority = ?")
+                    params.append(priority_f)
+
+                sla_f = query.get('sla_filter', [''])[0]
+                if sla_f == 'overdue':
+                    where_clauses.append("c.sla_due_at IS NOT NULL AND datetime(c.sla_due_at) < datetime('now') AND c.status NOT IN ('resolved', 'closed')")
+                elif sla_f == 'warning':
+                    where_clauses.append("c.sla_due_at IS NOT NULL AND datetime(c.sla_due_at) >= datetime('now') AND datetime(c.sla_due_at) <= datetime('now', '+12 hours') AND c.status NOT IN ('resolved', 'closed')")
+                elif sla_f == 'on_track':
+                    where_clauses.append("c.sla_due_at IS NOT NULL AND datetime(c.sla_due_at) > datetime('now', '+12 hours') AND c.status NOT IN ('resolved', 'closed')")
+                elif sla_f == 'resolved':
+                    where_clauses.append("c.status IN ('resolved', 'closed')")
+
+                search_f = query.get('search', [''])[0]
+                if search_f:
+                    where_clauses.append("(c.title LIKE ? OR c.complaint_id LIKE ? OR c.location LIKE ?)")
+                    s_term = f"%{search_f}%"
+                    params.extend([s_term, s_term, s_term])
+
+                assigned_to_f = query.get('assigned_to', [''])[0]
+                if assigned_to_f == 'me':
+                    target_uid = user["id"] if user else 2
+                    where_clauses.append("c.assigned_to = ?")
+                    params.append(target_uid)
+                elif assigned_to_f and assigned_to_f.isdigit():
+                    where_clauses.append("c.assigned_to = ?")
+                    params.append(int(assigned_to_f))
+
+                where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+
+                count_sql = f"SELECT COUNT(*) FROM complaints c {where_sql}"
+                c.execute(count_sql, params)
+                total_count = c.fetchone()[0]
+
+                page = max(1, int(query.get('page', [1])[0]))
+                limit = 10
+                offset = (page - 1) * limit
+
+                sql = f"""
                 SELECT c.*, cat.name as category_name, cat.icon as category_icon, 
                        dept.name as department_name, u.name as assigned_name
                 FROM complaints c
                 LEFT JOIN categories cat ON c.category_id = cat.id
                 LEFT JOIN departments dept ON c.department_id = dept.id
                 LEFT JOIN users u ON c.assigned_to = u.id
+                {where_sql}
                 ORDER BY c.id DESC
-                """)
+                LIMIT ? OFFSET ?
+                """
+                c.execute(sql, params + [limit, offset])
                 rows = []
                 for r in c.fetchall():
                     item = dict(r)
@@ -434,8 +514,16 @@ class CampusFixHandler(SimpleHTTPRequestHandler):
                     c2.execute("SELECT storage_key, original_filename FROM attachments WHERE complaint_id = ?", (item['id'],))
                     item['attachments'] = [dict(a) for a in c2.fetchall()]
                     rows.append(item)
-                self.send_json({"success": True, "complaints": rows, "pagination": {"page": 1, "totalPages": 1, "total": len(rows)}})
-                self.send_json({"success": True, "complaints": rows, "pagination": {"page": 1, "totalPages": 1, "total": len(rows)}})
+
+                total_pages = max(1, (total_count + limit - 1) // limit)
+                self.send_json({
+                    "success": True,
+                    "complaints": rows,
+                    "total": total_count,
+                    "page": page,
+                    "pages": total_pages,
+                    "pagination": {"page": page, "totalPages": total_pages, "total": total_count}
+                })
             elif action == 'map_markers':
                 c.execute("SELECT id, complaint_id, title, location, latitude, longitude, priority, status FROM complaints WHERE latitude IS NOT NULL")
                 self.send_json({"success": True, "markers": [dict(r) for r in c.fetchall()], "campus": {"lat": 26.9124, "lng": 75.7873, "zoom": 16}})
@@ -556,15 +644,25 @@ class CampusFixHandler(SimpleHTTPRequestHandler):
                 row = c.fetchone()
                 self.send_json({"success": True, "upvoted": True, "upvotes_count": row[0] if row else 1})
             elif action == 'update':
-                cid = int(query.get('id', [0])[0] or fields.get('complaint_id', 0) or 0)
+                cid = int(query.get('id', [0])[0] or fields.get('id', 0) or fields.get('complaint_id', 0) or 0)
                 status = fields.get('status')
                 assigned = fields.get('assigned_to')
+                dept_id = fields.get('department_id')
+                comment = fields.get('comment')
+                escalate = fields.get('escalate')
+
                 if status:
                     c.execute("UPDATE complaints SET status = ? WHERE id = ?", (status, cid))
-                if assigned:
-                    c.execute("UPDATE complaints SET assigned_to = ? WHERE id = ?", (assigned, cid))
+                if assigned is not None and str(assigned).strip() != '':
+                    c.execute("UPDATE complaints SET assigned_to = ? WHERE id = ?", (int(assigned), cid))
+                    if not status:
+                        c.execute("UPDATE complaints SET status = 'assigned' WHERE id = ? AND status = 'pending'", (cid,))
+                if dept_id:
+                    c.execute("UPDATE complaints SET department_id = ? WHERE id = ?", (int(dept_id), cid))
+                if escalate:
+                    c.execute("UPDATE complaints SET priority = 'urgent', escalation_level = escalation_level + 1 WHERE id = ?", (cid,))
                 conn.commit()
-                self.send_json({"success": True})
+                self.send_json({"success": True, "message": "Complaint updated successfully"})
             return
 
         conn.close()

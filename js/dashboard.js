@@ -167,11 +167,14 @@ async function viewComplaint(id) {
             <div style="margin-bottom:1.5rem;">
                 <div style="font-size:0.78rem; color:var(--color-text-muted); margin-bottom:6px;">Attachments</div>
                 <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-                    ${c.attachments.map(a => `
-                        <img src="../uploads/${a.storage_key}" alt="${a.original_filename}" 
-                             style="max-width:150px; border-radius:var(--radius-sm); border:1px solid var(--color-border); cursor:pointer;"
-                             onclick="window.open('../uploads/${a.storage_key}', '_blank')">
-                    `).join('')}
+                    ${c.attachments.map(a => {
+                        const src = (a.storage_key && (a.storage_key.startsWith('data:') || a.storage_key.startsWith('http'))) ? a.storage_key : `../uploads/${a.storage_key}`;
+                        return `
+                            <img src="${src}" alt="${a.original_filename || 'Attachment'}" 
+                                 style="max-width:150px; max-height:150px; object-fit:cover; border-radius:var(--radius-sm); border:1px solid var(--color-border); cursor:pointer;"
+                                 onclick="window.open('${src}', '_blank')">
+                        `;
+                    }).join('')}
                 </div>
             </div>
         ` : ''}

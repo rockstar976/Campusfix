@@ -141,6 +141,7 @@ switch ($action) {
         $priority = $_GET['priority'] ?? '';
         $search = $_GET['search'] ?? '';
         $slaFilter = $_GET['sla_filter'] ?? '';
+        $assignedTo = $_GET['assigned_to'] ?? '';
         
         $where = "WHERE c.institution_id = ?";
         $params = [$_SESSION['institution_id']];
@@ -156,6 +157,13 @@ switch ($action) {
         if ($priority) {
             $where .= " AND c.priority = ?";
             $params[] = $priority;
+        }
+        if ($assignedTo === 'me' && isLoggedIn()) {
+            $where .= " AND c.assigned_to = ?";
+            $params[] = $_SESSION['user_id'];
+        } elseif (!empty($assignedTo) && is_numeric($assignedTo)) {
+            $where .= " AND c.assigned_to = ?";
+            $params[] = intval($assignedTo);
         }
         if ($slaFilter === 'overdue') {
             $where .= " AND c.sla_due_at IS NOT NULL AND c.sla_due_at < NOW() AND c.status NOT IN ('resolved', 'closed')";

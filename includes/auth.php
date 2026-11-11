@@ -84,7 +84,10 @@ function loginUser($email, $password) {
         return ['success' => false, 'message' => 'Invalid email or password.'];
     }
     
-    // Step 4: Login success hone par session variables store karein
+    // Step 4: Login success hone par session ID regenerate karein (Session Fixation immunity)
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_regenerate_id(true);
+    }
     $_SESSION['user_id'] = $user['id'];
     $_SESSION['user_name'] = $user['name'];
     $_SESSION['user_email'] = $user['email'];

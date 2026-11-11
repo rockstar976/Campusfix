@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Analytics &amp; SLA Performance — CampusFix">
+    <title>Analytics &amp; SLA Performance — CampusFix</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+    <!-- Navigation -->
+    <nav class="navbar">
+        <a href="../index.html" class="navbar-brand">
+            <div class="logo-icon"><i class="fa-solid fa-wrench"></i></div>
+            CampusFix
+        </a>
+        <button class="menu-toggle" onclick="toggleMobileMenu()">
+            <i class="fa-solid fa-bars"></i>
+        </button>
+        <ul class="navbar-links" id="navLinks"></ul>
+        <div class="navbar-actions" id="navActions"></div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+
+            <!-- Page Header -->
+            <div class="page-header">
+                <h1 id="adminPageTitle">Campus Analytics &amp; SLA Performance</h1>
+                <p id="adminPageSubtitle">Automated departmental resolution speeds, backlog queues, and compliance audits</p>
+            </div>
+
+            <!-- Staff/Admin Feature Navigation Bar (Equal Width) -->
+            <div class="admin-feature-nav">
+                <a href="admin.html" class="admin-feature-btn">
+                    <i class="fa-solid fa-chart-line"></i> Dashboard
+                </a>
+                <a href="complaints.html" class="admin-feature-btn">
+                    <i class="fa-solid fa-clipboard-list"></i> Complaints
+                </a>
+                <a href="analytics.html" class="admin-feature-btn active">
+                    <i class="fa-solid fa-chart-pie"></i> Analytics
+                </a>
+            </div>
+
+            <!-- Key Performance Metrics Grid -->
+            <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); margin-bottom: 1.75rem;">
+                <div class="stat-card" style="border-left: 3px solid var(--color-success);">
+                    <div class="stat-icon" style="color:var(--color-success);"><i class="fa-solid fa-shield-halved"></i></div>
+                    <div class="stat-value" id="statSlaCompliance" style="color:var(--color-success);">100%</div>
+                    <div class="stat-label">SLA Compliance Rate</div>
+                </div>
+                <div class="stat-card" style="border-left: 3px solid var(--color-accent);">
+                    <div class="stat-icon" style="color:var(--color-accent);"><i class="fa-solid fa-stopwatch"></i></div>
+                    <div class="stat-value" id="statAvgResolution" style="color:var(--color-accent);">0h</div>
+                    <div class="stat-label">Avg Resolution Time</div>
+                </div>
+                <div class="stat-card" style="border-left: 3px solid #fbbf24;">
+                    <div class="stat-icon" style="color:#fbbf24;"><i class="fa-solid fa-hourglass-half"></i></div>
+                    <div class="stat-value" id="statNearingBreach" style="color:#fbbf24;">0</div>
+                    <div class="stat-label">Nearing Breach (&lt;12h)</div>
+                </div>
+                <div class="stat-card" style="border-left: 3px solid var(--color-danger);">
+                    <div class="stat-icon" style="color:var(--color-danger);"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="stat-value" id="statOverdue" style="color:var(--color-danger);">0</div>
+                    <div class="stat-label">SLA Breached</div>
+                </div>
+            </div>
+
+            <!-- Department Backlog & Resolution Speed -->
+            <div class="card" id="deptBacklogCard" style="padding:1.5rem; margin-bottom:1.75rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                    <div>
+                        <h3 style="font-size:1.15rem; margin:0;"><i class="fa-solid fa-chart-pie" style="color:var(--color-accent);"></i> Automated Department Backlog &amp; Resolution Workload</h3>
+                        <p style="font-size:0.82rem; color:var(--color-text-secondary); margin-top:3px;">
+                            Workload distribution routed by auto-categorization &bull; Real-time queue telemetry
+                        </p>
+                    </div>
+                </div>
+                <div id="deptBacklogGrid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:14px;">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+
+            <!-- SLA Guidelines & Performance Tiers Card -->
+            <div class="card" style="padding:1.5rem;">
+                <h3 style="font-size:1.15rem; margin:0 0 12px 0;"><i class="fa-solid fa-layer-group" style="color:var(--color-accent);"></i> Service Level Agreement (SLA) Benchmarks</h3>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:12px;">
+                    <div style="padding:12px; background:var(--color-bg-secondary); border-radius:var(--radius-sm); border-left:3px solid var(--color-danger);">
+                        <strong style="color:var(--color-danger); display:block; margin-bottom:4px;"><i class="fa-solid fa-bolt"></i> Urgent Priority</strong>
+                        <span style="font-size:0.85rem; color:var(--color-text-secondary);">Target: &le; 2 hours resolution</span>
+                    </div>
+                    <div style="padding:12px; background:var(--color-bg-secondary); border-radius:var(--radius-sm); border-left:3px solid #ea580c;">
+                        <strong style="color:#ea580c; display:block; margin-bottom:4px;"><i class="fa-solid fa-fire"></i> High Priority</strong>
+                        <span style="font-size:0.85rem; color:var(--color-text-secondary);">Target: &le; 6 hours resolution</span>
+                    </div>
+                    <div style="padding:12px; background:var(--color-bg-secondary); border-radius:var(--radius-sm); border-left:3px solid #d97706;">
+                        <strong style="color:#d97706; display:block; margin-bottom:4px;"><i class="fa-solid fa-clock"></i> Medium Priority</strong>
+                        <span style="font-size:0.85rem; color:var(--color-text-secondary);">Target: &le; 24 hours resolution</span>
+                    </div>
+                    <div style="padding:12px; background:var(--color-bg-secondary); border-radius:var(--radius-sm); border-left:3px solid var(--color-success);">
+                        <strong style="color:var(--color-success); display:block; margin-bottom:4px;"><i class="fa-solid fa-circle-check"></i> Low Priority</strong>
+                        <span style="font-size:0.85rem; color:var(--color-text-secondary);">Target: &le; 48 hours resolution</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script src="../js/app.js"></script>
+    <script src="../js/admin.js"></script>
+</body>
+</html>
+
