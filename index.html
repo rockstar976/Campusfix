@@ -28,6 +28,14 @@
             <li><a href="#departments">Departments</a></li>
             <li><a href="#security">Security</a></li>
         </ul>
+        <div class="navbar-utility-tools">
+            <button class="btn btn-secondary btn-sm nav-icon-btn" id="soundToggleBtn" onclick="toggleAudioSfx()" title="Toggle UI Sound Synthesizer" aria-label="Toggle UI Sound">
+                <i class="fa-solid fa-volume-high"></i>
+            </button>
+            <button class="btn btn-secondary btn-sm nav-icon-btn" id="themeToggleBtn" onclick="toggleThemeMode()" title="Toggle Dark/Light Mode" aria-label="Toggle Theme">
+                <i class="fa-solid fa-moon"></i>
+            </button>
+        </div>
         <div class="navbar-actions" id="navActions">
             <a href="pages/login.html" class="btn btn-secondary btn-sm">Login</a>
             <a href="pages/register.html" class="btn btn-primary btn-sm">Sign Up</a>
@@ -40,6 +48,36 @@
         <!-- 3D Interactive Hero Canvas & Content -->
         <div class="hero-wrapper">
             <canvas id="hero3dCanvas" class="hero-3d-canvas" aria-hidden="true"></canvas>
+
+            <!-- 3D Holographic Tooltip HUD -->
+            <div class="holo-tooltip" id="holoTooltip" aria-hidden="true">
+                <div class="tooltip-header">
+                    <span class="tooltip-badge sim-badge-urgent" id="tooltipBadge">High Priority</span>
+                    <span class="tooltip-id" id="tooltipId">CF-2026-0142</span>
+                </div>
+                <div class="tooltip-title" id="tooltipTitle">Water Cooler Leakage &amp; Broken Filter</div>
+                <div class="tooltip-location" id="tooltipLocation"><i class="fa-solid fa-location-dot"></i> Science Block B &bull; Lab 204</div>
+                <div class="tooltip-hint"><i class="fa-solid fa-hand-pointer"></i> Click hotspot to inspect live pass</div>
+            </div>
+
+            <!-- 3D Campus Digital Twin Control Dock -->
+            <div class="hero-3d-dock" id="hero3dDock" aria-label="3D Campus Twin Controls">
+                <button type="button" class="dock-btn active" id="btnToggleOrbit" onclick="toggle3DOrbit()" title="Toggle 360° Orbit Rotation">
+                    <i class="fa-solid fa-arrows-rotate"></i> <span>Orbit</span>
+                </button>
+                <button type="button" class="dock-btn" id="btnToggleHolo" onclick="toggle3DHoloMode()" title="Toggle Holo-Wireframe Scan">
+                    <i class="fa-solid fa-draw-polygon"></i> <span>Holo Scan</span>
+                </button>
+                <button type="button" class="dock-btn" id="btnCycleHotspot" onclick="cycle3DHotspot()" title="Focus Active Incident Hotspot">
+                    <i class="fa-solid fa-crosshairs"></i> <span>Focus Pin</span>
+                </button>
+                <button type="button" class="dock-btn" id="btnResetCamera" onclick="reset3DCamera()" title="Reset 3D Perspective">
+                    <i class="fa-solid fa-compress"></i> <span>Reset</span>
+                </button>
+                <div class="dock-status">
+                    <span class="status-dot"></span> 4 Hotspots Live
+                </div>
+            </div>
 
             <section class="hero">
                 <div class="hero-badge">
@@ -64,6 +102,24 @@
                     <a href="#features" class="btn btn-secondary btn-lg">
                         <i class="fa-solid fa-play"></i> Explore Platform
                     </a>
+                </div>
+
+                <!-- Instant Ticket Quick-Tracker Bar -->
+                <div class="ticket-quick-tracker" id="ticketQuickTracker">
+                    <form class="tracker-input-wrapper" onsubmit="handleQuickTrack(event)">
+                        <i class="fa-solid fa-magnifying-glass tracker-search-icon"></i>
+                        <input type="text" id="quickTrackerInput" placeholder="Enter Complaint ID (e.g. CF-2026-0142) or keyword..." autocomplete="off" spellcheck="false">
+                        <button type="submit" class="btn btn-primary" id="quickTrackBtn">
+                            <i class="fa-solid fa-bolt"></i> Track Status
+                        </button>
+                    </form>
+                    <div class="tracker-hints">
+                        <span class="hints-label"><i class="fa-solid fa-fire"></i> Quick Query:</span>
+                        <button type="button" class="tracker-tag" onclick="quickSearchTag('CF-2026-0142')">CF-2026-0142</button>
+                        <button type="button" class="tracker-tag" onclick="quickSearchTag('CF-2026-0098')">CF-2026-0098</button>
+                        <button type="button" class="tracker-tag" onclick="quickSearchTag('CF-2026-0211')">CF-2026-0211</button>
+                        <button type="button" class="tracker-tag" onclick="quickSearchTag('CF-2026-0185')">CF-2026-0185</button>
+                    </div>
                 </div>
 
                 <!-- Interactive 3D Glassmorphic Live Simulation Card -->
@@ -351,6 +407,19 @@
                 <i class="fa-solid fa-user-plus"></i> Create Free Account
             </a>
         </section>
+
+        <!-- Quick-Tracker Live Incident Modal with Dynamic SVG QR Pass -->
+        <div class="modal-overlay" id="quickTrackerModal" onclick="if(event.target===this)closeTrackerModal()" role="dialog" aria-modal="true" aria-labelledby="trackerModalTitle">
+            <div class="modal modal-lg" style="max-width: 660px;">
+                <div class="modal-header">
+                    <h2 id="trackerModalTitle"><i class="fa-solid fa-shield-halved" style="color:var(--color-accent);margin-right:8px;"></i> Live Ticket Status Pass</h2>
+                    <button type="button" class="modal-close" onclick="closeTrackerModal()" aria-label="Close modal">&times;</button>
+                </div>
+                <div class="modal-body" id="trackerModalBody">
+                    <!-- Dynamically populated by renderTrackerModalContent() -->
+                </div>
+            </div>
+        </div>
 
         <!-- Footer -->
         <footer

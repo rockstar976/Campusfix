@@ -61,6 +61,49 @@
     --transition-slow: 0.4s ease;
 }
 
+/* High-Contrast Obsidian Night Theme (Strictly Zero Blue) */
+[data-theme="dark"] {
+    --color-bg:            #090d16;
+    --color-bg-secondary:  #0f172a;
+    --color-bg-card:       #131c31;
+    --color-bg-card-hover: #1e293b;
+    --color-bg-input:      #0f172a;
+    --color-border:        #26334d;
+    --color-border-focus:  #e11d48;
+
+    --color-text-primary:   #f8fafc;
+    --color-text-secondary: #94a3b8;
+    --color-text-muted:     #64748b;
+
+    --color-accent-glow:    rgba(225, 29, 72, 0.28);
+    --shadow-sm:  0 1px 3px rgba(0, 0, 0, 0.45);
+    --shadow-md:  0 4px 16px rgba(0, 0, 0, 0.55);
+    --shadow-lg:  0 12px 32px rgba(0, 0, 0, 0.70);
+}
+
+[data-theme="dark"] .navbar {
+    background: rgba(9, 13, 22, 0.90);
+    border-bottom: 1px solid var(--color-border);
+}
+
+[data-theme="dark"] .hero-wrapper {
+    background: radial-gradient(circle at 50% 15%, rgba(225, 29, 72, 0.12) 0%, #090d16 80%);
+}
+
+[data-theme="dark"] .hero-sim-card,
+[data-theme="dark"] .hero-stats-ticker,
+[data-theme="dark"] .tracker-input-wrapper {
+    background: rgba(19, 28, 49, 0.92);
+    border-color: rgba(225, 29, 72, 0.35);
+}
+
+[data-theme="dark"] .hero h1 .gradient-text {
+    background: linear-gradient(135deg, #ffffff 0%, var(--color-accent) 60%, #f43f5e 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
 /* ---------- Reset & Base ---------- */
 *, *::before, *::after {
     box-sizing: border-box;
@@ -158,6 +201,33 @@ img { max-width: 100%; height: auto; }
 .navbar-links a.active {
     color: var(--color-text-primary);
     background: var(--color-bg-card);
+}
+
+.navbar-utility-tools {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.nav-icon-btn {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.95rem;
+    color: var(--color-text-secondary);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-card);
+    transition: all var(--transition-fast);
+}
+
+.nav-icon-btn:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+    transform: scale(1.05);
 }
 
 .navbar-actions {
@@ -892,8 +962,146 @@ select.form-control {
     width: 100%;
     height: 100%;
     z-index: 0;
+    pointer-events: auto;
+    opacity: 0.92;
+}
+
+/* ---------- 3D Holographic Campus Digital Twin HUD Dock ---------- */
+.hero-3d-dock {
+    position: absolute;
+    bottom: 24px;
+    right: 28px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255, 255, 255, 0.90);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(225, 29, 72, 0.25);
+    border-radius: 999px;
+    padding: 6px 14px;
+    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+    transition: all 0.3s ease;
+}
+
+.dock-btn {
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all var(--transition-fast);
+    font-family: var(--font-family);
+}
+
+.dock-btn:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+}
+
+.dock-btn.active {
+    background: var(--color-accent);
+    color: #ffffff;
+    box-shadow: 0 2px 8px var(--color-accent-glow);
+}
+
+.dock-status {
+    font-size: 0.74rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding-left: 10px;
+    border-left: 1px solid var(--color-border);
+}
+
+.dock-status .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    box-shadow: 0 0 8px var(--color-accent);
+    animation: badgePulse 2s infinite;
+}
+
+/* ---------- 3D Holographic Tooltip HUD ---------- */
+.holo-tooltip {
+    position: fixed;
     pointer-events: none;
-    opacity: 0.90;
+    opacity: 0;
+    transform: translate(-50%, -100%) translateY(-14px);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+    z-index: 1000;
+    background: rgba(15, 23, 42, 0.94);
+    backdrop-filter: blur(14px);
+    border: 1px solid rgba(225, 29, 72, 0.45);
+    border-radius: var(--radius-md);
+    padding: 10px 14px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4), 0 0 16px rgba(225, 29, 72, 0.2);
+    color: #ffffff;
+    min-width: 230px;
+    max-width: 300px;
+    text-align: left;
+}
+
+.holo-tooltip.visible {
+    opacity: 1;
+    transform: translate(-50%, -100%) translateY(-22px);
+}
+
+.holo-tooltip .tooltip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.holo-tooltip .tooltip-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.holo-tooltip .tooltip-id {
+    font-family: monospace;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-accent);
+}
+
+.holo-tooltip .tooltip-title {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #ffffff;
+    line-height: 1.3;
+    margin-bottom: 4px;
+}
+
+.holo-tooltip .tooltip-location {
+    font-size: 0.75rem;
+    color: #94a3b8;
+    margin-bottom: 6px;
+}
+
+.holo-tooltip .tooltip-hint {
+    font-size: 0.68rem;
+    color: var(--color-accent);
+    font-weight: 600;
+    border-top: 1px solid rgba(255, 255, 255, 0.12);
+    padding-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
 
 .hero {
@@ -970,7 +1178,208 @@ select.form-control {
     justify-content: center;
     position: relative;
     z-index: 1;
-    margin-bottom: 3rem;
+    margin-bottom: 2rem;
+}
+
+/* ---------- Instant Ticket Quick-Tracker Bar ---------- */
+.ticket-quick-tracker {
+    max-width: 620px;
+    margin: 0 auto 2.5rem;
+    position: relative;
+    z-index: 2;
+}
+
+.tracker-input-wrapper {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(16px);
+    border: 2px solid rgba(225, 29, 72, 0.25);
+    border-radius: 999px;
+    padding: 6px 8px 6px 18px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    transition: all 0.25s ease;
+}
+
+.tracker-input-wrapper:focus-within {
+    border-color: var(--color-accent);
+    box-shadow: 0 12px 36px rgba(225, 29, 72, 0.16);
+    transform: translateY(-2px);
+}
+
+.tracker-input-wrapper .tracker-search-icon {
+    color: var(--color-accent);
+    font-size: 1.15rem;
+    margin-right: 6px;
+}
+
+.tracker-input-wrapper input {
+    flex: 1;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 0.95rem;
+    font-family: var(--font-family);
+    color: var(--color-text-primary);
+    padding: 8px 10px;
+}
+
+.tracker-hints {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.tracker-hints .hints-label {
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+}
+
+.tracker-tag {
+    background: rgba(225, 29, 72, 0.08);
+    border: 1px solid rgba(225, 29, 72, 0.22);
+    color: var(--color-accent);
+    border-radius: 999px;
+    padding: 3px 11px;
+    font-size: 0.74rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-family: var(--font-family);
+}
+
+.tracker-tag:hover {
+    background: var(--color-accent);
+    color: #ffffff;
+    border-color: var(--color-accent);
+    transform: scale(1.04);
+}
+
+/* ---------- Ticket Pass & Verification Card ---------- */
+.ticket-pass-card {
+    text-align: left;
+}
+
+.ticket-pass-header {
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 1.25rem;
+}
+
+.ticket-pass-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.ticket-pass-id {
+    font-family: monospace;
+    font-size: 1.1rem;
+    font-weight: 800;
+    color: var(--color-accent);
+    background: rgba(225, 29, 72, 0.08);
+    padding: 3px 10px;
+    border-radius: var(--radius-sm);
+}
+
+.ticket-pass-headline {
+    font-size: 1.35rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    margin-bottom: 0.5rem;
+}
+
+.ticket-pass-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    font-size: 0.84rem;
+    color: var(--color-text-secondary);
+}
+
+.ticket-pass-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 1.5rem;
+    align-items: start;
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-border);
+}
+
+.ticket-pass-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+}
+
+.detail-row {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.detail-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-text-muted);
+}
+
+.detail-val {
+    font-size: 0.92rem;
+    color: var(--color-text-primary);
+}
+
+.detail-desc {
+    font-size: 0.88rem;
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+    background: var(--color-bg-secondary);
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    border-left: 3px solid var(--color-accent);
+}
+
+.ticket-modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 1rem;
+}
+
+.ticket-pass-qr-box {
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+}
+
+.qr-svg-pass {
+    display: block;
+    margin: 0 auto 8px;
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+    border-radius: 8px;
+}
+
+.qr-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+
+.qr-sub {
+    font-size: 0.68rem;
+    color: var(--color-text-muted);
+    max-width: 130px;
+    margin: 4px auto 0;
+    line-height: 1.3;
 }
 
 /* ---------- 3D Glassmorphic Live Simulation Card ---------- */
