@@ -127,6 +127,16 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
+::selection {
+    background: rgba(225, 29, 72, 0.22);
+    color: var(--color-accent);
+}
+
+::-moz-selection {
+    background: rgba(225, 29, 72, 0.22);
+    color: var(--color-accent);
+}
+
 a {
     color: var(--color-accent);
     text-decoration: none;
@@ -1035,27 +1045,34 @@ select.form-control {
 /* ---------- 3D Holographic Campus Digital Twin HUD Dock ---------- */
 .hero-3d-dock {
     position: absolute;
-    bottom: 24px;
+    top: 80px;
     right: 28px;
     z-index: 10;
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 8px;
-    background: rgba(255, 255, 255, 0.90);
-    backdrop-filter: blur(16px);
-    border: 1px solid rgba(225, 29, 72, 0.25);
-    border-radius: var(--radius-sm);
-    padding: 6px 14px;
-    box-shadow: 0 10px 25px rgba(15, 23, 42, 0.08);
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(225, 29, 72, 0.22);
+    border-radius: 50px;
+    padding: 4px 10px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
     transition: all 0.3s ease;
+    user-select: none;
+}
+
+[data-theme="dark"] .hero-3d-dock {
+    background: rgba(15, 23, 42, 0.85);
+    border-color: rgba(225, 29, 72, 0.35);
 }
 
 .dock-btn {
-    background: none;
+    background: transparent;
     border: 1px solid transparent;
-    border-radius: 4px;
+    border-radius: 50px;
     padding: 5px 12px;
-    font-size: 0.76rem;
+    font-size: 0.74rem;
     font-weight: 600;
     color: var(--color-text-secondary);
     cursor: pointer;
@@ -1067,8 +1084,8 @@ select.form-control {
 }
 
 .dock-btn:hover {
-    border-color: var(--color-accent);
     color: var(--color-accent);
+    background: var(--color-accent-glow);
 }
 
 .dock-btn.active {
@@ -1234,11 +1251,12 @@ select.form-control {
 .hero-stage-visual {
     position: relative;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-end;
     min-height: 520px;
     perspective: 1400px;
-    pointer-events: auto;
+    pointer-events: none;
 }
 
 /* ---------- Scroll-Triggered 3D Kinetic Typography ---------- */
@@ -1253,6 +1271,8 @@ select.form-control {
     margin-bottom: 0.75rem;
     perspective: 1000px;
     transform-style: preserve-3d;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .type3d-layer {
@@ -1279,6 +1299,8 @@ select.form-control {
     transform-style: preserve-3d;
     will-change: transform, text-shadow;
     transition: text-shadow 0.2s ease;
+    user-select: none;
+    -webkit-user-select: none;
     text-shadow: 0 1px 0 #cbd5e1, 0 2px 0 #94a3b8, 0 3px 0 rgba(15, 23, 42, 0.15), 0 8px 16px rgba(225, 29, 72, 0.18);
 }
 
@@ -1558,75 +1580,47 @@ select.form-control {
 /* ---------- 3D Isometric Spatial UI Showcase (Awwwards/Stripe Style) ---------- */
 .iso-stage-perspective {
     width: 100%;
-    max-width: 440px;
+    max-width: 420px;
+    margin-top: 180px;
     perspective: 1200px;
     perspective-origin: 50% 50%;
     transform-style: preserve-3d;
+    pointer-events: auto;
 }
 
 .iso-stage-board {
     position: relative;
     width: 100%;
     transform-style: preserve-3d;
-    transform: rotateX(14deg) rotateY(-18deg) rotateZ(3deg);
-    transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+    transform: rotateX(6deg) rotateY(-6deg);
+    transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
     will-change: transform;
 }
 
 /* Base Plate with Glow and Grid (Z: -25px) */
 .iso-base-plate {
-    position: absolute;
-    inset: -24px -20px -28px -20px;
-    border-radius: var(--radius-2xl);
-    background: linear-gradient(135deg, rgba(225, 29, 72, 0.08), rgba(15, 23, 42, 0.03));
-    border: 1px solid rgba(225, 29, 72, 0.22);
-    box-shadow: 0 35px 70px -15px rgba(15, 23, 42, 0.22), 0 0 30px rgba(225, 29, 72, 0.12);
-    transform: translateZ(-25px);
-    pointer-events: none;
-    backdrop-filter: blur(12px);
-    overflow: hidden;
+    display: none;
 }
 
 .iso-grid-lines {
-    position: absolute;
-    inset: 0;
-    background-image:
-        linear-gradient(rgba(225, 29, 72, 0.12) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(225, 29, 72, 0.12) 1px, transparent 1px);
-    background-size: 24px 24px;
-    opacity: 0.6;
+    display: none;
 }
 
 .iso-radar-sweep {
-    position: absolute;
-    width: 180%;
-    height: 40px;
-    top: -50%;
-    left: -40%;
-    background: linear-gradient(180deg, transparent, rgba(225, 29, 72, 0.25), transparent);
-    transform: rotate(-35deg);
-    animation: radarSweep 6s linear infinite;
-    pointer-events: none;
-}
-
-@keyframes radarSweep {
-    0% { transform: translateY(-100px) rotate(-35deg); opacity: 0; }
-    30% { opacity: 1; }
-    70% { opacity: 1; }
-    100% { transform: translateY(450px) rotate(-35deg); opacity: 0; }
+    display: none;
 }
 
 /* Floating 3D Telemetry Badges */
 .iso-float-badge {
     position: absolute;
-    padding: 7px 16px;
+    padding: 5px 12px;
     border-radius: 999px;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 700;
     display: inline-flex;
     align-items: center;
-    gap: 8px;
-    box-shadow: 0 16px 32px -6px rgba(15, 23, 42, 0.25), 0 0 20px rgba(225, 29, 72, 0.25);
+    gap: 6px;
+    box-shadow: 0 10px 20px -4px rgba(15, 23, 42, 0.18), 0 0 15px rgba(225, 29, 72, 0.2);
     transform-style: preserve-3d;
     pointer-events: none;
     z-index: 20;
@@ -1635,30 +1629,25 @@ select.form-control {
 }
 
 .iso-badge-urgent {
-    top: -18px;
+    top: -12px;
     right: 15px;
     background: linear-gradient(135deg, #e11d48, #be123c);
     color: #ffffff;
-    transform: translateZ(75px);
+    transform: translateZ(45px);
     border: 1px solid rgba(255, 255, 255, 0.3);
 }
 
 .iso-badge-verified {
-    bottom: -20px;
+    bottom: -12px;
     left: 15px;
     background: rgba(15, 23, 42, 0.94);
     color: #ffffff;
     border: 1px solid rgba(225, 29, 72, 0.45);
-    transform: translateZ(60px);
+    transform: translateZ(35px);
 }
 
 .iso-badge-speed {
-    top: 50%;
-    right: -32px;
-    background: rgba(255, 255, 255, 0.94);
-    color: #0f172a;
-    border: 1px solid rgba(225, 29, 72, 0.35);
-    transform: translateZ(80px);
+    display: none;
 }
 
 [data-theme="dark"] .iso-badge-speed {
@@ -1667,9 +1656,7 @@ select.form-control {
 }
 
 [data-theme="dark"] .iso-base-plate {
-    background: linear-gradient(135deg, rgba(225, 29, 72, 0.12), rgba(15, 23, 42, 0.45));
-    border-color: rgba(225, 29, 72, 0.35);
-    box-shadow: 0 35px 70px -15px rgba(0, 0, 0, 0.6), 0 0 35px rgba(225, 29, 72, 0.15);
+    display: none;
 }
 
 .iso-pulse-dot {
@@ -1690,12 +1677,12 @@ select.form-control {
 .iso-card-elevation {
     margin: 0;
     width: 100%;
-    transform: translateZ(35px);
+    transform: translateZ(25px);
     transform-style: preserve-3d;
 }
 
 .hero-simulation-wrapper {
-    max-width: 680px;
+    max-width: 440px;
     perspective: 1200px;
     position: relative;
     z-index: 5;
@@ -1703,13 +1690,13 @@ select.form-control {
 
 .hero-sim-card {
     position: relative;
-    background: rgba(255, 255, 255, 0.88);
+    background: rgba(255, 255, 255, 0.78);
     backdrop-filter: blur(28px) saturate(190%);
     -webkit-backdrop-filter: blur(28px) saturate(190%);
-    border: 1px solid rgba(225, 29, 72, 0.32);
-    border-radius: var(--radius-xl);
-    padding: 1.6rem;
-    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.18), 0 0 25px rgba(225, 29, 72, 0.10);
+    border: 1px solid rgba(225, 29, 72, 0.24);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem 1.4rem;
+    box-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.12), 0 0 25px rgba(225, 29, 72, 0.08);
     text-align: left;
     transform-style: preserve-3d;
     overflow: hidden;

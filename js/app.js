@@ -1273,10 +1273,22 @@ function init3DHeroCanvas() {
         // Passes test suite: outerHubGeo + innerHubMesh
         // ----------------------------------------------------
         const beaconGroup = new THREE.Group();
-        beaconGroup.position.set(isDesktop ? 65 : 0, 22, -25);
+        beaconGroup.position.set(isDesktop ? 58 : 0, 32, -10);
         networkGroup.add(beaconGroup);
 
         const outerHubGeo = new THREE.IcosahedronGeometry(16, 0);
+        const outerGlassMat = new THREE.MeshPhysicalMaterial({
+            color: isDarkTheme ? 0x1e293b : 0xf8fafc,
+            metalness: 0.20,
+            roughness: 0.12,
+            transmission: 0.65,
+            transparent: true,
+            opacity: isDarkTheme ? 0.35 : 0.45,
+            reflectivity: 0.8
+        });
+        const outerGlassMesh = new THREE.Mesh(outerHubGeo, outerGlassMat);
+        beaconGroup.add(outerGlassMesh);
+
         const hubMesh = new THREE.LineSegments(new THREE.WireframeGeometry(outerHubGeo), edgeCrimsonMat);
         beaconGroup.add(hubMesh);
 
@@ -1547,7 +1559,7 @@ function init3DHeroCanvas() {
             camera.updateProjectionMatrix();
             renderer.setSize(width, height);
             const isDesk = width > 992;
-            beaconGroup.position.set(isDesk ? 65 : 0, 22, -25);
+            beaconGroup.position.set(isDesk ? 58 : 0, 32, -10);
         }
         window.addEventListener('resize', onWindowResize);
 
@@ -1591,6 +1603,8 @@ function init3DHeroCanvas() {
             // 2. Central Crystalline Telemetry Beacon Counter-Rotation
             hubMesh.rotation.x += 0.006;
             hubMesh.rotation.y += 0.010;
+            outerGlassMesh.rotation.x = hubMesh.rotation.x;
+            outerGlassMesh.rotation.y = hubMesh.rotation.y;
             innerHubMesh.rotation.x -= 0.012;
             innerHubMesh.rotation.y += 0.016;
             const coreScale = 1.0 + Math.sin(elapsedTime * 2.8) * 0.08;
