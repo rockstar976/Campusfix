@@ -1273,7 +1273,7 @@ function init3DHeroCanvas() {
         // Passes test suite: outerHubGeo + innerHubMesh
         // ----------------------------------------------------
         const beaconGroup = new THREE.Group();
-        beaconGroup.position.set(isDesktop ? 58 : 0, 32, -10);
+        beaconGroup.position.set(isDesktop ? 55 : 0, 36, -5);
         networkGroup.add(beaconGroup);
 
         const outerHubGeo = new THREE.IcosahedronGeometry(16, 0);
@@ -1559,7 +1559,7 @@ function init3DHeroCanvas() {
             camera.updateProjectionMatrix();
             renderer.setSize(width, height);
             const isDesk = width > 992;
-            beaconGroup.position.set(isDesk ? 58 : 0, 32, -10);
+            beaconGroup.position.set(isDesk ? 55 : 0, 36, -5);
         }
         window.addEventListener('resize', onWindowResize);
 
@@ -1762,6 +1762,23 @@ function reset3DCamera() {
         window._campus3d.networkGroup.rotation.y = -0.30;
     }
     showToast('3D Spatial Scene Reset to Default Angle', 'info');
+}
+
+function toggleSimCardView() {
+    playSfx('click');
+    const card = document.getElementById('heroSimCard');
+    const icon = document.getElementById('simCardToggleIcon');
+    const dockBtn = document.getElementById('btnToggleSimBoard');
+    if (!card) return;
+    card.classList.toggle('minimized');
+    const isMin = card.classList.contains('minimized');
+    if (icon) {
+        icon.className = isMin ? 'fa-solid fa-chevron-up' : 'fa-solid fa-chevron-down';
+    }
+    if (dockBtn) {
+        dockBtn.classList.toggle('active', !isMin);
+    }
+    showToast(isMin ? 'Ticket HUD Minimized (3D Scene Unobstructed)' : 'Ticket HUD Expanded', 'info');
 }
 
 // ============================================

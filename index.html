@@ -7,7 +7,7 @@
     <meta name="description"
         content="CampusFix — Next-Generation Campus Issue Reporting & Resolution Platform. Report it. Track it. Fix it.">
     <title>CampusFix — Report it. Track it. Fix it.</title>
-    <link rel="stylesheet" href="css/style.css?v=4.1">
+    <link rel="stylesheet" href="css/style.css?v=5.0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 
@@ -59,6 +59,9 @@
                 </button>
                 <button type="button" class="dock-btn" id="btnToggleExplode" onclick="toggle3DExplodedMode()" title="Toggle 3D Exploded Architectural View">
                     <i class="fa-solid fa-layer-group"></i> <span>Exploded</span>
+                </button>
+                <button type="button" class="dock-btn" id="btnToggleSimBoard" onclick="toggleSimCardView()" title="Toggle Ticket Overlay (Clear 3D View)">
+                    <i class="fa-solid fa-id-card"></i> <span>Ticket HUD</span>
                 </button>
                 <button type="button" class="dock-btn" id="btnResetCamera" onclick="reset3DCamera()" title="Reset 3D Core">
                     <i class="fa-solid fa-compress"></i> <span>Reset</span>
@@ -156,9 +159,13 @@
                                     <div class="hero-sim-card" id="heroSimCard">
                                         <div class="sim-card-specular-glare" id="simGlare"></div>
                                         <div class="sim-card-header">
-                                            <span class="sim-badge sim-badge-urgent"><i class="fa-solid fa-bolt"></i> High
-                                                Priority</span>
-                                            <span class="sim-id">CF-2026-0142</span>
+                                            <span class="sim-badge sim-badge-urgent"><i class="fa-solid fa-bolt"></i> High Priority</span>
+                                            <div style="display: flex; align-items: center; gap: 8px;">
+                                                <span class="sim-id">CF-2026-0142</span>
+                                                <button type="button" class="sim-card-toggle-btn" id="simCardToggleBtn" onclick="toggleSimCardView()" title="Minimize / Expand Ticket HUD">
+                                                    <i class="fa-solid fa-chevron-down" id="simCardToggleIcon"></i>
+                                                </button>
+                                            </div>
                                         </div>
                                         <h3 class="sim-title">Water Cooler Leakage &amp; Broken Filter</h3>
                                         <div class="sim-meta">
@@ -465,7 +472,7 @@
 
     <!-- Three.js Library for 3D Hero Canvas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="js/app.js?v=4.1"></script>
+    <script src="js/app.js?v=5.0"></script>
     <script>
         // Check authentication state for dynamic navigation header
         async function updateIndexNav() {

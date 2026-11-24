@@ -65,10 +65,10 @@
 [data-theme="dark"] {
     --color-bg:            #090d16;
     --color-bg-secondary:  #0f172a;
-    --color-bg-card:       #131c31;
-    --color-bg-card-hover: #1e293b;
+    --color-bg-card:       #111827;
+    --color-bg-card-hover: #1f2937;
     --color-bg-input:      #0f172a;
-    --color-border:        #26334d;
+    --color-border:        #1e293b;
     --color-border-focus:  #e11d48;
 
     --color-text-primary:   #f8fafc;
@@ -93,10 +93,10 @@
 [data-theme="dark"] .hero-sim-card,
 [data-theme="dark"] .hero-stats-ticker,
 [data-theme="dark"] .tracker-input-wrapper {
-    background: rgba(15, 23, 42, 0.82);
+    background: rgba(17, 24, 39, 0.88);
     backdrop-filter: blur(24px) saturate(190%);
     -webkit-backdrop-filter: blur(24px) saturate(190%);
-    border-color: rgba(225, 29, 72, 0.35);
+    border-color: var(--color-border);
 }
 
 [data-theme="dark"] .hero h1 .gradient-text {
@@ -127,14 +127,35 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
-::selection {
-    background: rgba(225, 29, 72, 0.22);
-    color: var(--color-accent);
+::selection, *::selection {
+    background: #e11d48 !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
 }
 
-::-moz-selection {
-    background: rgba(225, 29, 72, 0.22);
-    color: var(--color-accent);
+::-moz-selection, *::-moz-selection {
+    background: #e11d48 !important;
+    color: #ffffff !important;
+}
+
+/* Prevent accidental blue selection dragging on hero title, kinetic layers, badges, and controls */
+.hero-3d-title,
+.hero-3d-title *,
+.hero h1,
+.hero h1 *,
+.type3d-word,
+.type3d-layer,
+.gradient-text,
+.hero-badge,
+.hero-3d-dock,
+.dock-btn,
+.tracker-tag,
+.btn,
+.sim-badge,
+.sim-id,
+.iso-float-badge {
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 a {
@@ -1203,31 +1224,36 @@ select.form-control {
     align-items: center;
     gap: 8px;
     padding: 6px 16px;
-    background: rgba(225, 29, 72, 0.08);
-    border: 1px solid rgba(225, 29, 72, 0.25);
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
     border-radius: 999px;
     font-size: 0.82rem;
     font-weight: 600;
-    color: var(--color-accent);
+    color: var(--color-text-secondary);
     margin-bottom: 1.5rem;
     backdrop-filter: blur(12px);
-    box-shadow: 0 4px 14px rgba(225, 29, 72, 0.08);
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+    transition: all var(--transition-fast);
+}
+
+.hero-badge:hover {
+    border-color: rgba(225, 29, 72, 0.35);
+    color: var(--color-text-primary);
 }
 
 .badge-pulse {
-    width: 8px;
-    height: 8px;
-    border-radius: 1px;
-    transform: rotate(45deg);
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
     background: var(--color-accent);
-    box-shadow: 0 0 10px var(--color-accent);
+    box-shadow: 0 0 8px var(--color-accent);
     animation: badgePulse 2s infinite;
 }
 
 @keyframes badgePulse {
-    0% { transform: rotate(45deg) scale(0.95); box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.6); }
-    70% { transform: rotate(45deg) scale(1.15); box-shadow: 0 0 0 8px rgba(225, 29, 72, 0); }
-    100% { transform: rotate(45deg) scale(0.95); box-shadow: 0 0 0 0 rgba(225, 29, 72, 0); }
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(225, 29, 72, 0.6); }
+    70% { transform: scale(1.15); box-shadow: 0 0 0 6px rgba(225, 29, 72, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(225, 29, 72, 0); }
 }
 
 /* ---------- 3D Asymmetric Stage Grid (Reveals 3D Content) ---------- */
@@ -1387,25 +1413,30 @@ select.form-control {
 .tracker-input-wrapper {
     display: flex;
     align-items: center;
-    background: rgba(255, 255, 255, 0.95);
+    background: rgba(255, 255, 255, 0.98);
     backdrop-filter: blur(16px);
-    border: 2px solid rgba(225, 29, 72, 0.25);
+    border: 1px solid var(--color-border);
     border-radius: 999px;
     padding: 6px 8px 6px 18px;
-    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.05);
     transition: all 0.25s ease;
 }
 
 .tracker-input-wrapper:focus-within {
     border-color: var(--color-accent);
-    box-shadow: 0 12px 36px rgba(225, 29, 72, 0.16);
-    transform: translateY(-2px);
+    box-shadow: 0 0 0 3px rgba(225, 29, 72, 0.12), 0 8px 24px rgba(15, 23, 42, 0.08);
+    transform: translateY(-1px);
 }
 
 .tracker-input-wrapper .tracker-search-icon {
-    color: var(--color-accent);
-    font-size: 1.15rem;
+    color: var(--color-text-muted);
+    font-size: 1.05rem;
     margin-right: 6px;
+    transition: color var(--transition-fast);
+}
+
+.tracker-input-wrapper:focus-within .tracker-search-icon {
+    color: var(--color-accent);
 }
 
 .tracker-input-wrapper input {
@@ -1435,23 +1466,25 @@ select.form-control {
 }
 
 .tracker-tag {
-    background: rgba(225, 29, 72, 0.08);
-    border: 1px solid rgba(225, 29, 72, 0.22);
-    color: var(--color-accent);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-secondary);
     border-radius: 999px;
-    padding: 3px 11px;
+    padding: 3px 12px;
     font-size: 0.74rem;
-    font-weight: 600;
+    font-weight: 500;
     cursor: pointer;
     transition: all var(--transition-fast);
     font-family: var(--font-family);
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
 }
 
 .tracker-tag:hover {
     background: var(--color-accent);
     color: #ffffff;
     border-color: var(--color-accent);
-    transform: scale(1.04);
+    transform: translateY(-1px);
+    box-shadow: 0 3px 10px rgba(225, 29, 72, 0.25);
 }
 
 /* ---------- Ticket Pass & Verification Card ---------- */
@@ -1580,12 +1613,13 @@ select.form-control {
 /* ---------- 3D Isometric Spatial UI Showcase (Awwwards/Stripe Style) ---------- */
 .iso-stage-perspective {
     width: 100%;
-    max-width: 420px;
-    margin-top: 180px;
+    max-width: 380px;
+    margin-top: 240px;
     perspective: 1200px;
     perspective-origin: 50% 50%;
     transform-style: preserve-3d;
     pointer-events: auto;
+    transition: margin-top 0.3s ease;
 }
 
 .iso-stage-board {
@@ -1682,7 +1716,7 @@ select.form-control {
 }
 
 .hero-simulation-wrapper {
-    max-width: 440px;
+    max-width: 380px;
     perspective: 1200px;
     position: relative;
     z-index: 5;
@@ -1690,17 +1724,63 @@ select.form-control {
 
 .hero-sim-card {
     position: relative;
-    background: rgba(255, 255, 255, 0.78);
+    background: rgba(255, 255, 255, 0.82);
     backdrop-filter: blur(28px) saturate(190%);
     -webkit-backdrop-filter: blur(28px) saturate(190%);
-    border: 1px solid rgba(225, 29, 72, 0.24);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
-    padding: 1.25rem 1.4rem;
-    box-shadow: 0 20px 45px -10px rgba(15, 23, 42, 0.12), 0 0 25px rgba(225, 29, 72, 0.08);
+    padding: 1.15rem 1.35rem;
+    box-shadow: 0 16px 36px -10px rgba(15, 23, 42, 0.10), 0 0 20px rgba(225, 29, 72, 0.05);
     text-align: left;
     transform-style: preserve-3d;
     overflow: hidden;
-    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.hero-sim-card:hover {
+    border-color: rgba(225, 29, 72, 0.35);
+    box-shadow: 0 24px 48px -10px rgba(15, 23, 42, 0.16), 0 0 25px rgba(225, 29, 72, 0.10);
+}
+
+/* Minimized HUD State for Clear 3D View */
+.hero-sim-card.minimized {
+    padding: 0.65rem 1.15rem;
+    border-radius: 50px;
+}
+
+.hero-sim-card.minimized .sim-meta,
+.hero-sim-card.minimized .sim-progress-bar,
+.hero-sim-card.minimized .sim-card-footer {
+    display: none;
+}
+
+.hero-sim-card.minimized .sim-title {
+    font-size: 0.82rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0;
+}
+
+.sim-card-toggle-btn {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    font-size: 0.80rem;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all var(--transition-fast);
+}
+
+.sim-card-toggle-btn:hover {
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+    background: rgba(225, 29, 72, 0.08);
 }
 
 .sim-card-specular-glare {
@@ -1715,12 +1795,6 @@ select.form-control {
 
 [data-theme="dark"] .sim-card-specular-glare {
     background: radial-gradient(circle at 60% 10%, rgba(225, 29, 72, 0.22), transparent 65%);
-}
-
-.hero-sim-card:hover {
-    transform: translateZ(42px);
-    border-color: rgba(225, 29, 72, 0.45);
-    box-shadow: 0 30px 60px -10px rgba(15, 23, 42, 0.22), 0 0 35px rgba(225, 29, 72, 0.15);
 }
 
 /* Global 3D Card Hover Perspective */
@@ -1744,36 +1818,37 @@ select.form-control {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 4px 10px;
+    padding: 3px 9px;
     border-radius: var(--radius-sm);
-    font-size: 0.75rem;
-    font-weight: 700;
+    font-size: 0.72rem;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
 .sim-badge-urgent {
-    background: rgba(239, 68, 68, 0.18);
-    color: #f87171;
-    border: 1px solid rgba(239, 68, 68, 0.35);
+    background: rgba(225, 29, 72, 0.08);
+    color: var(--color-accent);
+    border: 1px solid rgba(225, 29, 72, 0.20);
 }
 
 .sim-id {
     font-family: monospace;
-    font-size: 0.9rem;
-    color: var(--color-accent);
-    font-weight: 700;
+    font-size: 0.84rem;
+    color: var(--color-text-secondary);
+    font-weight: 600;
     letter-spacing: 0.5px;
-    background: rgba(225, 29, 72, 0.08);
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
     padding: 2px 8px;
     border-radius: var(--radius-sm);
 }
 
 .sim-title {
-    font-size: 1.25rem;
+    font-size: 1.18rem;
     font-weight: 700;
     color: var(--color-text-primary);
-    margin-bottom: 0.4rem;
+    margin-bottom: 0.35rem;
 }
 
 .sim-meta {
