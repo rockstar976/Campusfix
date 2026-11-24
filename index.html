@@ -7,7 +7,7 @@
     <meta name="description"
         content="CampusFix — Next-Generation Campus Issue Reporting & Resolution Platform. Report it. Track it. Fix it.">
     <title>CampusFix — Report it. Track it. Fix it.</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=4.1">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 </head>
 
@@ -56,6 +56,9 @@
                 </button>
                 <button type="button" class="dock-btn" id="btnToggleHolo" onclick="toggle3DHoloMode()" title="Toggle Cyber Wireframe Mode">
                     <i class="fa-solid fa-draw-polygon"></i> <span>Wireframe</span>
+                </button>
+                <button type="button" class="dock-btn" id="btnToggleExplode" onclick="toggle3DExplodedMode()" title="Toggle 3D Exploded Architectural View">
+                    <i class="fa-solid fa-layer-group"></i> <span>Exploded</span>
                 </button>
                 <button type="button" class="dock-btn" id="btnResetCamera" onclick="reset3DCamera()" title="Reset 3D Core">
                     <i class="fa-solid fa-compress"></i> <span>Reset</span>
@@ -119,52 +122,82 @@
                         </div>
                     </div>
 
-                    <!-- Right Column: Unobstructed 3D Focal Aperture & Floating Glass Card -->
+                    <!-- Right Column: Interactive 3D Isometric Spatial UI Showcase -->
                     <div class="hero-stage-visual">
-                        <!-- Interactive 3D Glassmorphic Live Simulation Card -->
-                        <div class="hero-simulation-wrapper">
-                            <div class="hero-sim-card">
-                                <div class="sim-card-header">
-                                    <span class="sim-badge sim-badge-urgent"><i class="fa-solid fa-bolt"></i> High
-                                        Priority</span>
-                                    <span class="sim-id">CF-2026-0142</span>
+                        <div class="iso-stage-perspective" id="isoStagePerspective">
+                            <div class="iso-stage-board" id="isoStageBoard">
+                                <!-- Background 3D Grounding Horizon Plate (Z: -25px) -->
+                                <div class="iso-base-plate" aria-hidden="true">
+                                    <div class="iso-grid-lines"></div>
+                                    <div class="iso-radar-sweep"></div>
                                 </div>
-                                <h3 class="sim-title">Water Cooler Leakage &amp; Broken Filter</h3>
-                                <div class="sim-meta">
-                                    <span><i class="fa-solid fa-location-dot"></i> Science Block B &bull; Floor 2 &bull; Lab
-                                        204</span>
+
+                                <!-- Floating 3D Telemetry Badge 1 (Foreground Z: 75px) -->
+                                <div class="iso-float-badge iso-badge-urgent" id="isoBadgeUrgent">
+                                    <span class="iso-pulse-dot"></span>
+                                    <i class="fa-solid fa-bolt"></i>
+                                    <span>High Priority &bull; Instant SLA</span>
                                 </div>
-                                <div class="sim-progress-bar">
-                                    <div class="sim-step completed">
-                                        <div class="dot"><i class="fa-solid fa-check"></i></div>
-                                        <span>Reported</span>
-                                    </div>
-                                    <div class="sim-step completed">
-                                        <div class="dot"><i class="fa-solid fa-check"></i></div>
-                                        <span>Assigned</span>
-                                    </div>
-                                    <div class="sim-step active">
-                                        <div class="dot"><i class="fa-solid fa-spinner fa-spin"></i></div>
-                                        <span>In Progress</span>
-                                    </div>
-                                    <div class="sim-step">
-                                        <div class="dot"></div>
-                                        <span>Resolved</span>
-                                    </div>
+
+                                <!-- Floating 3D Telemetry Badge 2 (Foreground Z: 60px) -->
+                                <div class="iso-float-badge iso-badge-verified" id="isoBadgeVerified">
+                                    <i class="fa-solid fa-shield-halved"></i>
+                                    <span>Cryptographic Photo Proof</span>
                                 </div>
-                                <div class="sim-card-footer">
-                                    <div class="sim-actions">
-                                        <button class="btn-sim-upvote btn-subtle-move-secondary" id="simUpvoteBtn" onclick="toggleSimUpvote(event)">
-                                            <i class="fa-solid fa-thumbs-up"></i>
-                                            <span>Upvote</span>
-                                            <span class="upvote-count" id="simUpvoteCount">42</span>
-                                        </button>
-                                        <button class="btn-sim-status" onclick="cycleSimStatus(event)">
-                                            <i class="fa-solid fa-forward-step"></i> Simulate Status
-                                        </button>
-                                    </div>
-                                    <div class="sim-verified-tag">
-                                        <i class="fa-solid fa-shield-halved"></i> Photo Evidence Attached
+
+                                <!-- Floating 3D Telemetry Badge 3 (Foreground Z: 80px) -->
+                                <div class="iso-float-badge iso-badge-speed" id="isoBadgeSpeed">
+                                    <i class="fa-solid fa-stopwatch"></i>
+                                    <span>&lt; 24h Resolved</span>
+                                </div>
+
+                                <!-- Main Isometric 3D Live Incident Ticket (Elevation Z: 35px) -->
+                                <div class="hero-simulation-wrapper iso-card-elevation">
+                                    <div class="hero-sim-card" id="heroSimCard">
+                                        <div class="sim-card-specular-glare" id="simGlare"></div>
+                                        <div class="sim-card-header">
+                                            <span class="sim-badge sim-badge-urgent"><i class="fa-solid fa-bolt"></i> High
+                                                Priority</span>
+                                            <span class="sim-id">CF-2026-0142</span>
+                                        </div>
+                                        <h3 class="sim-title">Water Cooler Leakage &amp; Broken Filter</h3>
+                                        <div class="sim-meta">
+                                            <span><i class="fa-solid fa-location-dot"></i> Science Block B &bull; Floor 2 &bull; Lab
+                                                204</span>
+                                        </div>
+                                        <div class="sim-progress-bar">
+                                            <div class="sim-step completed">
+                                                <div class="dot"><i class="fa-solid fa-check"></i></div>
+                                                <span>Reported</span>
+                                            </div>
+                                            <div class="sim-step completed">
+                                                <div class="dot"><i class="fa-solid fa-check"></i></div>
+                                                <span>Assigned</span>
+                                            </div>
+                                            <div class="sim-step active">
+                                                <div class="dot"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                                                <span>In Progress</span>
+                                            </div>
+                                            <div class="sim-step">
+                                                <div class="dot"></div>
+                                                <span>Resolved</span>
+                                            </div>
+                                        </div>
+                                        <div class="sim-card-footer">
+                                            <div class="sim-actions">
+                                                <button class="btn-sim-upvote btn-subtle-move-secondary" id="simUpvoteBtn" onclick="toggleSimUpvote(event)">
+                                                    <i class="fa-solid fa-thumbs-up"></i>
+                                                    <span>Upvote</span>
+                                                    <span class="upvote-count" id="simUpvoteCount">42</span>
+                                                </button>
+                                                <button class="btn-sim-status" onclick="cycleSimStatus(event)">
+                                                    <i class="fa-solid fa-forward-step"></i> Simulate Status
+                                                </button>
+                                            </div>
+                                            <div class="sim-verified-tag">
+                                                <i class="fa-solid fa-shield-halved"></i> Live Spatial Node
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -432,21 +465,33 @@
 
     <!-- Three.js Library for 3D Hero Canvas -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="js/app.js"></script>
+    <script src="js/app.js?v=4.1"></script>
     <script>
         // Check authentication state for dynamic navigation header
-        document.addEventListener('DOMContentLoaded', async () => {
+        async function updateIndexNav() {
             const user = await checkAuth();
+            const navActions = document.getElementById('navActions');
+            if (!navActions) return;
+
             if (user) {
                 const isAdmin = ['super_admin', 'department_admin', 'staff'].includes(user.role);
-                const navActions = document.getElementById('navActions');
-                if (navActions) {
-                    navActions.innerHTML = `
-                        <a href="${isAdmin ? 'pages/admin.html' : 'pages/dashboard.html'}" class="btn btn-primary btn-sm">
-                            <i class="fa-solid fa-gauge"></i> Dashboard
-                        </a>
-                    `;
-                }
+                navActions.innerHTML = `
+                    <a href="${isAdmin ? 'pages/admin.html' : 'pages/dashboard.html'}" class="btn btn-primary btn-sm">
+                        <i class="fa-solid fa-gauge"></i> Dashboard
+                    </a>
+                `;
+            } else {
+                navActions.innerHTML = `
+                    <a href="pages/login.html" class="btn btn-secondary btn-sm">Log In</a>
+                    <a href="pages/register.html" class="btn btn-primary btn-sm">Sign Up</a>
+                `;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', updateIndexNav);
+        window.addEventListener('pageshow', (event) => {
+            if (event.persisted) {
+                updateIndexNav();
             }
         });
     </script>

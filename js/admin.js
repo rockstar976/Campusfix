@@ -11,56 +11,77 @@ let staffMembers = [];
 let categories = [];
 let assignedToMeOnly = false;
 
-document.addEventListener('DOMContentLoaded', async () => {
-    // Smooth redirection for legacy anchor links to dedicated pages
-    if (window.location.hash === '#complaints' && !window.location.pathname.includes('complaints.html')) {
-        window.location.replace('complaints.html');
-        return;
-    }
-    if (window.location.hash === '#analytics' && !window.location.pathname.includes('analytics.html')) {
-        window.location.replace('analytics.html');
-        return;
-    }
+let adminInitInProgress = false;
 
-    const user = await setupNavbar();
-    if (!user) return redirectTo('login.html');
+async function initAdminPortal() {
+    if (adminInitInProgress) return;
+    adminInitInProgress = true;
 
-    if (!['super_admin', 'department_admin', 'staff'].includes(user.role)) {
-        return redirectTo('dashboard.html');
-    }
-
-    // Customize portal headers for maintenance staff
-    if (user.role === 'staff') {
-        const titleEl = document.getElementById('adminPageTitle');
-        const subEl = document.getElementById('adminPageSubtitle');
-        if (titleEl) {
-            if (window.location.pathname.includes('complaints.html')) {
-                titleEl.textContent = 'Staff Work Orders & Assigned Issues';
-            } else if (window.location.pathname.includes('analytics.html')) {
-                titleEl.textContent = 'Staff Performance & SLA Telemetry';
-            } else {
-                titleEl.textContent = 'Staff Maintenance Portal & Work Orders';
-            }
+    try {
+        // Smooth redirection for legacy anchor links to dedicated pages
+        if (window.location.hash === '#complaints' && !window.location.pathname.includes('complaints.html')) {
+            window.location.replace('complaints.html');
+            return;
         }
-        if (subEl) subEl.textContent = 'View and resolve maintenance issues across campus';
+        if (window.location.hash === '#analytics' && !window.location.pathname.includes('analytics.html')) {
+            window.location.replace('analytics.html');
+            return;
+        }
+
+        const user = await setupNavbar();
+        if (!user) {
+            redirectTo('login.html', true);
+            return;
+        }
+
+        if (!['super_admin', 'department_admin', 'staff'].includes(user.role)) {
+            redirectTo('dashboard.html', true);
+            return;
+        }
+
+        // Customize portal headers for maintenance staff
+        if (user.role === 'staff') {
+            const titleEl = document.getElementById('adminPageTitle');
+            const subEl = document.getElementById('adminPageSubtitle');
+            if (titleEl) {
+                if (window.location.pathname.includes('complaints.html')) {
+                    titleEl.textContent = 'Staff Work Orders & Assigned Issues';
+                } else if (window.location.pathname.includes('analytics.html')) {
+                    titleEl.textContent = 'Staff Performance & SLA Telemetry';
+                } else {
+                    titleEl.textContent = 'Staff Maintenance Portal & Work Orders';
+                }
+            }
+            if (subEl) subEl.textContent = 'View and resolve maintenance issues across campus';
+        }
+
+        // Load dropdown data
+        const [deptResult, staffResult, catResult] = await Promise.all([
+            api.get('data.php?action=departments'),
+            api.get('data.php?action=staff'),
+            api.get('data.php?action=categories')
+        ]);
+
+        departments = deptResult.success ? deptResult.departments : [];
+        staffMembers = staffResult.success ? staffResult.staff : [];
+        categories = catResult.success ? catResult.categories : [];
+
+        // Populate filter dropdowns
+        populateFilterDropdowns();
+
+        // Load dashboard
+        loadAdminDashboard();
+    } finally {
+        adminInitInProgress = false;
     }
+}
 
-    // Load dropdown data
-    const [deptResult, staffResult, catResult] = await Promise.all([
-        api.get('data.php?action=departments'),
-        api.get('data.php?action=staff'),
-        api.get('data.php?action=categories')
-    ]);
+document.addEventListener('DOMContentLoaded', initAdminPortal);
 
-    departments = deptResult.success ? deptResult.departments : [];
-    staffMembers = staffResult.success ? staffResult.staff : [];
-    categories = catResult.success ? catResult.categories : [];
-
-    // Populate filter dropdowns
-    populateFilterDropdowns();
-
-    // Load dashboard
-    loadAdminDashboard();
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+        initAdminPortal();
+    }
 });
 
 // ============================================
@@ -321,57 +342,57 @@ async function openComplaintDetail(id) {
             <span class="badge ${getStatusBadge(c.status)}">${formatStatus(c.status)}</span>
         </div>
 
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.5rem;">
-            <div>
-                <div style="font-size:0.78rem; color:var(--color-text-muted); margin-bottom:2px;">Category & Routed Department</div>
-                <div style="font-size:0.9rem;">${c.category_name || 'N/A'} &bull; <strong style="color:var(--color-accent);">${c.department_name || 'Auto-Routing'}</strong></div>
+        <div class="modal-meta-grid">
+            <div class="meta-box">
+                <div class="meta-label"><i class="fa-solid fa-tag"></i> Category & Routed Department</div>
+                <div class="meta-value">${c.category_name || 'General Issue'} &bull; <strong style="color:var(--color-accent);">${c.department_name || 'Auto-Routing'}</strong></div>
             </div>
-            <div>
-                <div style="font-size:0.78rem; color:var(--color-text-muted); margin-bottom:2px;">Priority & SLA Target</div>
-                <div style="display:flex; gap:6px; align-items:center;">
+            <div class="meta-box">
+                <div class="meta-label"><i class="fa-solid fa-bullseye"></i> Priority & SLA Target</div>
+                <div style="display:flex; gap:6px; align-items:center; margin-top:2px;">
                     <span class="badge ${getPriorityBadge(c.priority)}">${c.priority}</span>
                     ${getSlaBadge(c)}
                 </div>
             </div>
-            <div>
-                <div style="font-size:0.78rem; color:var(--color-text-muted); margin-bottom:2px;">Location & Coordinates</div>
-                <div style="font-size:0.9rem;">${c.location || 'N/A'} ${c.latitude ? `<small style="color:var(--color-text-muted);">(${parseFloat(c.latitude).toFixed(4)}, ${parseFloat(c.longitude).toFixed(4)})</small>` : ''}</div>
+            <div class="meta-box">
+                <div class="meta-label"><i class="fa-solid fa-location-dot"></i> Location & Coordinates</div>
+                <div class="meta-value">${c.location || 'N/A'} ${c.latitude ? `<small style="color:var(--color-text-muted);">(${parseFloat(c.latitude).toFixed(4)}, ${parseFloat(c.longitude).toFixed(4)})</small>` : ''}</div>
             </div>
-            <div>
-                <div style="font-size:0.78rem; color:var(--color-text-muted); margin-bottom:2px;">SLA Due Date / Escalation</div>
-                <div style="font-size:0.9rem;">
+            <div class="meta-box">
+                <div class="meta-label"><i class="fa-solid fa-clock"></i> SLA Due Date / Escalation</div>
+                <div class="meta-value">
                     ${c.sla_due_at ? formatDate(c.sla_due_at) : 'No SLA Target'}
-                    ${c.escalation_level > 0 ? `<span class="badge" style="background:rgba(239,68,68,0.15); color:var(--color-danger); margin-left:6px;"><i class="fa-solid fa-arrow-trend-up"></i> Level ${c.escalation_level} Escalated</span>` : ''}
+                    ${c.escalation_level > 0 ? `<span class="badge" style="background:rgba(220,38,38,0.15); color:var(--color-danger); margin-left:6px;"><i class="fa-solid fa-arrow-trend-up"></i> Level ${c.escalation_level} Escalated</span>` : ''}
                 </div>
             </div>
         </div>
 
         <div style="margin-bottom:1.5rem;">
-            <div style="font-size:0.78rem; color:var(--color-text-muted); margin-bottom:6px;">Description</div>
-            <div style="font-size:0.9rem; color:var(--color-text-secondary); line-height:1.6; padding:1rem; background:var(--color-bg); border-radius:var(--radius-sm);">
+            <div style="font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:var(--color-text-muted); margin-bottom:6px;">Description</div>
+            <div style="font-size:0.9rem; color:var(--color-text-secondary); line-height:1.6; padding:1rem; background:var(--color-bg-secondary); border:1px solid var(--color-border); border-radius:var(--radius-sm);">
                 ${c.description}
             </div>
         </div>
 
         ${c.attachments && c.attachments.length > 0 ? `
             <div style="margin-bottom:1.5rem;">
-                <div style="font-size:0.78rem; color:var(--color-text-muted); margin-bottom:6px;">Evidence</div>
+                <div style="font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:var(--color-text-muted); margin-bottom:6px;">Evidence</div>
                 <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
                     ${c.attachments.map(a => {
-                        const src = (a.storage_key && (a.storage_key.startsWith('data:') || a.storage_key.startsWith('http'))) ? a.storage_key : `../uploads/${a.storage_key}`;
-                        return `
+        const src = (a.storage_key && (a.storage_key.startsWith('data:') || a.storage_key.startsWith('http'))) ? a.storage_key : `../uploads/${a.storage_key}`;
+        return `
                             <img src="${src}" alt="${a.original_filename || 'Evidence'}" 
                                  style="max-width:150px; max-height:150px; object-fit:cover; border-radius:var(--radius-sm); border:1px solid var(--color-border); cursor:pointer;"
                                  onclick="window.open('${src}', '_blank')">
                         `;
-                    }).join('')}
+    }).join('')}
                 </div>
             </div>
         ` : ''}
 
         ${c.latitude && c.longitude ? `
             <div style="margin-bottom:1.5rem;">
-                <div style="font-size:0.78rem; color:var(--color-text-muted); margin-bottom:6px;">
+                <div style="font-size:0.75rem; font-weight:600; text-transform:uppercase; letter-spacing:0.5px; color:var(--color-text-muted); margin-bottom:6px;">
                     <i class="fa-solid fa-map-location-dot" style="color:var(--color-accent);"></i> Exact Campus Pin (${c.latitude}, ${c.longitude})
                 </div>
                 <div id="adminModalMap" style="height:190px; border-radius:var(--radius-sm); border:1px solid var(--color-border); z-index:1;"></div>
@@ -379,9 +400,9 @@ async function openComplaintDetail(id) {
         ` : ''}
 
         <!-- Admin Actions -->
-        <div style="padding:1.5rem; background:var(--color-bg); border-radius:var(--radius-md); margin-bottom:1.5rem;">
-            <h4 style="margin-bottom:1rem; font-size:0.95rem;">Actions</h4>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+        <div style="padding:1.25rem; background:var(--color-bg-secondary); border:1px solid var(--color-border); border-radius:var(--radius-md); margin-bottom:1.5rem;">
+            <h4 style="margin-bottom:1rem; font-size:0.95rem;"><i class="fa-solid fa-sliders" style="color:var(--color-accent);"></i> Ticket Actions & Staff Dispatch</h4>
+            <div class="modal-meta-grid" style="margin-bottom:0;">
                 <div class="form-group" style="margin-bottom:0;">
                     <label>Update Status</label>
                     <select class="form-control" id="updateStatus">

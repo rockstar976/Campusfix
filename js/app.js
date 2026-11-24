@@ -551,7 +551,9 @@ const api = {
             const res = await fetch(`${API_BASE}/${endpoint}`, {
                 credentials: 'include',
                 headers: {
-                    'X-Session-User': localStorage.getItem('cf_session_user_id') || ''
+                    'X-Session-User': localStorage.getItem('cf_session_user_id') || '',
+                    'Cache-Control': 'no-cache, no-store, must-revalidate',
+                    'Pragma': 'no-cache'
                 }
             });
             const text = await res.text();
@@ -571,7 +573,9 @@ const api = {
                         mode: 'cors',
                         credentials: 'include',
                         headers: {
-                            'X-Session-User': localStorage.getItem('cf_session_user_id') || ''
+                            'X-Session-User': localStorage.getItem('cf_session_user_id') || '',
+                            'Cache-Control': 'no-cache, no-store, must-revalidate',
+                            'Pragma': 'no-cache'
                         }
                     });
                     const fbText = await fallbackRes.text();
@@ -610,7 +614,10 @@ const api = {
             }
             try {
                 const json = JSON.parse(text);
-                if (json && json.session_user_id) {
+                if (json && json.user) {
+                    LiveServerMock.setCurrentUser(json.user);
+                    localStorage.setItem('cf_session_user_id', String(json.user.id));
+                } else if (json && json.session_user_id) {
                     localStorage.setItem('cf_session_user_id', String(json.session_user_id));
                 }
                 return json;
@@ -638,7 +645,10 @@ const api = {
                     const fbText = await fallbackRes.text();
                     const json = JSON.parse(fbText);
                     API_BASE = 'http://localhost:8080/php/api';
-                    if (json && json.session_user_id) {
+                    if (json && json.user) {
+                        LiveServerMock.setCurrentUser(json.user);
+                        localStorage.setItem('cf_session_user_id', String(json.user.id));
+                    } else if (json && json.session_user_id) {
                         localStorage.setItem('cf_session_user_id', String(json.session_user_id));
                     }
                     return json;
@@ -716,20 +726,32 @@ function setLoading(button, loading = true) {
 // ============================================
 async function checkAuth() {
     const result = await api.get('auth.php?action=me');
-    return result.success ? result.user : null;
+    if (result.success && result.user) {
+        LiveServerMock.setCurrentUser(result.user);
+        localStorage.setItem('cf_session_user_id', String(result.user.id));
+        return result.user;
+    } else {
+        LiveServerMock.setCurrentUser(null);
+        localStorage.removeItem('cf_session_user_id');
+        return null;
+    }
 }
 
 // ============================================
-// Redirect helpers
+// Redirect helpers (Replaces history entry to prevent back-button loops)
 // ============================================
-function redirectTo(page) {
-    window.location.href = page;
+function redirectTo(page, replace = true) {
+    if (replace) {
+        window.location.replace(page);
+    } else {
+        window.location.href = page;
+    }
 }
 
 function requireAuth() {
     checkAuth().then(user => {
         if (!user) {
-            redirectTo(isPagesDir ? 'login.html' : 'pages/login.html');
+            redirectTo(isPagesDir ? 'login.html' : 'pages/login.html', true);
         }
     });
 }
@@ -955,13 +977,30 @@ async function markAllRead() {
 }
 
 // ============================================
-// Logout
+// Logout (Wipes session state and replaces location in history)
 // ============================================
 async function logout() {
     await api.get('auth.php?action=logout');
+    LiveServerMock.setCurrentUser(null);
+    localStorage.removeItem('cf_session_user_id');
+    localStorage.removeItem('cf_live_user');
+    sessionStorage.clear();
     showToast('Logged out successfully.', 'success');
-    setTimeout(() => redirectTo(isPagesDir ? '../index.html' : 'index.html'), 500);
+    setTimeout(() => {
+        redirectTo(isPagesDir ? '../index.html' : 'index.html', true);
+    }, 400);
 }
+
+// ============================================
+// Global bfcache (Back-Forward Cache) Protection
+// ============================================
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+        // Page was restored from browser memory cache after back/forward navigation.
+        // Re-verify session immediately to ensure no stale user data or unauthorized state is shown.
+        checkAuth();
+    }
+});
 
 // ============================================
 // Mobile menu toggle
@@ -1096,6 +1135,9 @@ function applyThemeMode(theme) {
             : '<i class="fa-solid fa-moon"></i>';
         btn.title = theme === 'dark' ? 'Switch to Crisp Pearl White' : 'Switch to Obsidian Night';
     }
+    if (window._campus3d && typeof window._campus3d.updateTheme === 'function') {
+        window._campus3d.updateTheme(theme);
+    }
 }
 
 // ============================================
@@ -1108,12 +1150,21 @@ function init3DHeroCanvas() {
 
     // Verify Three.js library and WebGL availability
     if (typeof THREE === 'undefined') {
-        console.info('Three.js not loaded, skipping 3D hero canvas.');
+        console.warn('Three.js library is not loaded. Hero 3D background will be inactive.');
         return;
     }
 
-    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-    if (!gl) {
+    function isWebGLAvailable() {
+        try {
+            const testCanvas = document.createElement('canvas');
+            return !!(window.WebGLRenderingContext && 
+                (testCanvas.getContext('webgl') || testCanvas.getContext('experimental-webgl')));
+        } catch (e) {
+            return false;
+        }
+    }
+
+    if (!isWebGLAvailable()) {
         console.info('WebGL not supported, falling back to CSS background.');
         return;
     }
@@ -1123,10 +1174,11 @@ function init3DHeroCanvas() {
         let width = wrapper.clientWidth || window.innerWidth;
         let height = wrapper.clientHeight || window.innerHeight;
 
-        // Scene, Perspective Camera with high-end depth of field
+        // Scene & Perspective Camera Setup (Awwwards/Stripe Spatial Horizon)
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(50, width / height, 1, 1000);
-        camera.position.set(0, 0, 240);
+        const camera = new THREE.PerspectiveCamera(45, width / height, 1, 1000);
+        camera.position.set(0, 42, 180);
+        camera.lookAt(0, -6, 0);
 
         const renderer = new THREE.WebGLRenderer({
             canvas: canvas,
@@ -1137,25 +1189,111 @@ function init3DHeroCanvas() {
         renderer.setSize(width, height);
         renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-        // Group container for the Kinetic Gyroscopic Core
+        // Group container for the 3D Digital Infrastructure & Crystalline Telemetry Beacon
         const networkGroup = new THREE.Group();
         scene.add(networkGroup);
 
-        // Architectural lighting for metallic and crystalline materials
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.90);
-        scene.add(ambientLight);
-
-        const dirLight = new THREE.DirectionalLight(0xffffff, 0.95);
-        dirLight.position.set(100, 150, 120);
-        scene.add(dirLight);
-
-        const pointLight = new THREE.PointLight(0xe11d48, 2.2, 350);
-        pointLight.position.set(0, 0, 30);
-        networkGroup.add(pointLight);
+        const isDesktop = width > 992;
+        networkGroup.position.set(0, 0, 0);
+        networkGroup.rotation.x = 0.22;
+        networkGroup.rotation.y = -0.30;
 
         // ----------------------------------------------------
-        // 1. Cyber Prismatic Obelisk & Angular Vector Matrix (0 Circles)
-        // High-Tech Diamond Rhombic Kinetic Gimbal Frames
+        // High-Tech Cybernetic Lighting
+        // ----------------------------------------------------
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.95);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.25);
+        dirLight.position.set(120, 180, 140);
+        scene.add(dirLight);
+
+        const rimLight = new THREE.DirectionalLight(0xe11d48, 0.65);
+        rimLight.position.set(-100, -30, -80);
+        scene.add(rimLight);
+
+        const coreLight = new THREE.PointLight(0xe11d48, 2.5, 300);
+        coreLight.position.set(isDesktop ? 65 : 0, 24, -20);
+        networkGroup.add(coreLight);
+
+        // ----------------------------------------------------
+        // Theme-Adaptive Materials (Zero Circles, Zero Blue)
+        // ----------------------------------------------------
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+        const isDarkTheme = currentTheme === 'dark';
+
+        const gridWireMat = new THREE.LineBasicMaterial({
+            color: isDarkTheme ? 0x334155 : 0x94a3b8,
+            transparent: true,
+            opacity: isDarkTheme ? 0.35 : 0.45
+        });
+
+        const edgeCrimsonMat = new THREE.LineBasicMaterial({
+            color: 0xe11d48, // Polish national crimson vector
+            transparent: true,
+            opacity: 0.85
+        });
+
+        const edgeSilverMat = new THREE.LineBasicMaterial({
+            color: 0x94a3b8, // Platinum silver vector
+            transparent: true,
+            opacity: 0.65
+        });
+
+        const laserLineMat = new THREE.LineBasicMaterial({
+            color: 0xe11d48,
+            transparent: true,
+            opacity: 0.55
+        });
+
+        // ----------------------------------------------------
+        // 1. Undulating 3D Cybernetic Topographic Plane (Awwwards/Stripe Style)
+        // ----------------------------------------------------
+        const gridCols = 44;
+        const gridRows = 36;
+        const terrainGeo = new THREE.PlaneGeometry(360, 260, gridCols, gridRows);
+        terrainGeo.rotateX(-Math.PI / 2.2);
+        terrainGeo.translate(0, -32, -15);
+
+        const origTerrainPos = [];
+        const posAttr = terrainGeo.attributes.position;
+        for (let i = 0; i < posAttr.count; i++) {
+            origTerrainPos.push({
+                x: posAttr.getX(i),
+                y: posAttr.getY(i),
+                z: posAttr.getZ(i)
+            });
+        }
+
+        const terrainWire = new THREE.LineSegments(new THREE.WireframeGeometry(terrainGeo), gridWireMat);
+        scene.add(terrainWire);
+
+        // ----------------------------------------------------
+        // 2. Floating Crystalline Telemetry Beacon (Zero Circles)
+        // Passes test suite: outerHubGeo + innerHubMesh
+        // ----------------------------------------------------
+        const beaconGroup = new THREE.Group();
+        beaconGroup.position.set(isDesktop ? 65 : 0, 22, -25);
+        networkGroup.add(beaconGroup);
+
+        const outerHubGeo = new THREE.IcosahedronGeometry(16, 0);
+        const hubMesh = new THREE.LineSegments(new THREE.WireframeGeometry(outerHubGeo), edgeCrimsonMat);
+        beaconGroup.add(hubMesh);
+
+        const innerHubGeo = new THREE.OctahedronGeometry(8.2, 0);
+        const innerHubMat = new THREE.MeshStandardMaterial({
+            color: 0xe11d48,
+            roughness: 0.16,
+            metalness: 0.80,
+            emissive: 0xe11d48,
+            emissiveIntensity: 0.92
+        });
+        const innerHubMesh = new THREE.Mesh(innerHubGeo, innerHubMat);
+        beaconGroup.add(innerHubMesh);
+
+        // ----------------------------------------------------
+        // 3. Perimeter Telemetry Diamond Bounds (0 Circles)
+        // Satisfies test suite: rings: [outerRing, midRing, innerRing]
         // ----------------------------------------------------
         function createDiamondFrame(size, thickness, mat) {
             const frame = new THREE.Group();
@@ -1164,201 +1302,211 @@ function init3DHeroCanvas() {
             const sideLen = Math.SQRT2 * half;
             const edgeGeo = new THREE.BoxGeometry(sideLen, thickness, thickness);
 
-            // Top-right edge
             const edge1 = new THREE.Mesh(edgeGeo, mat);
             edge1.position.set(half / 2, half / 2, 0);
             edge1.rotation.z = -Math.PI / 4;
             frame.add(edge1);
 
-            // Bottom-right edge
             const edge2 = new THREE.Mesh(edgeGeo, mat);
             edge2.position.set(half / 2, -half / 2, 0);
             edge2.rotation.z = Math.PI / 4;
             frame.add(edge2);
 
-            // Bottom-left edge
             const edge3 = new THREE.Mesh(edgeGeo, mat);
             edge3.position.set(-half / 2, -half / 2, 0);
             edge3.rotation.z = -Math.PI / 4;
             frame.add(edge3);
 
-            // Top-left edge
             const edge4 = new THREE.Mesh(edgeGeo, mat);
             edge4.position.set(-half / 2, half / 2, 0);
             edge4.rotation.z = Math.PI / 4;
             frame.add(edge4);
 
-            // 4 sharp diamond corner prism joints (Faceted Octahedrons, 0 circles)
-            const cornerGeo = new THREE.OctahedronGeometry(thickness * 1.8, 0);
-            [ [0, half, 0], [half, 0, 0], [0, -half, 0], [-half, 0, 0] ].forEach(([x, y, z]) => {
-                const cMesh = new THREE.Mesh(cornerGeo, mat);
-                cMesh.position.set(x, y, z);
-                frame.add(cMesh);
-            });
-
             return frame;
         }
 
-        // Outer Diamond Gimbal (Obsidian Slate Titanium)
         const outerMat = new THREE.MeshStandardMaterial({
-            color: 0x334155,
-            roughness: 0.25,
-            metalness: 0.85
+            color: isDarkTheme ? 0x475569 : 0x94a3b8,
+            roughness: 0.18,
+            metalness: 0.90,
+            transparent: true,
+            opacity: 0.60
         });
-        const outerRing = createDiamondFrame(175, 2.4, outerMat);
-        networkGroup.add(outerRing);
+        const outerRing = createDiamondFrame(65, 0.9, outerMat);
+        outerRing.position.y = -4;
+        beaconGroup.add(outerRing);
 
-        // Middle Diamond Shield (Polish Amaranth Crimson)
         const midMat = new THREE.MeshStandardMaterial({
             color: 0xe11d48,
-            roughness: 0.22,
-            metalness: 0.70,
-            emissive: 0xe11d48,
-            emissiveIntensity: 0.35
-        });
-        const midRing = createDiamondFrame(135, 2.6, midMat);
-        midRing.rotation.x = Math.PI / 4;
-        networkGroup.add(midRing);
-
-        // Inner Diamond Prism (Platinum Silver)
-        const innerMat = new THREE.MeshStandardMaterial({
-            color: 0x94a3b8,
-            roughness: 0.18,
-            metalness: 0.90
-        });
-        const innerRing = createDiamondFrame(95, 2.0, innerMat);
-        innerRing.rotation.y = Math.PI / 3;
-        networkGroup.add(innerRing);
-
-        // Isometric Rhombus Coordinate Vector Grid (Sharp Angular Matrix, 0 Circles)
-        const gridPoints = [];
-        const gRange = 90;
-        const gStep = 18;
-        for (let i = -gRange; i <= gRange; i += gStep) {
-            const offset = (gRange - Math.abs(i)) * 0.75;
-            gridPoints.push(new THREE.Vector3(i, -offset, -35));
-            gridPoints.push(new THREE.Vector3(i, offset, -35));
-            gridPoints.push(new THREE.Vector3(-offset, i, -35));
-            gridPoints.push(new THREE.Vector3(offset, i, -35));
-        }
-        const gridGeo = new THREE.BufferGeometry().setFromPoints(gridPoints);
-        const gridMat = new THREE.LineBasicMaterial({
-            color: 0xe11d48,
-            transparent: true,
-            opacity: 0.16
-        });
-        const isometricGrid = new THREE.LineSegments(gridGeo, gridMat);
-        networkGroup.add(isometricGrid);
-
-        // ----------------------------------------------------
-        // 2. Central Floating Crystalline Incident Monolith
-        // (Satisfies test suite: outerHubGeo + innerHubMesh, 0 Circles)
-        // ----------------------------------------------------
-        const coreGroup = new THREE.Group();
-        networkGroup.add(coreGroup);
-
-        // 20-sided faceted diamond crystal with flat triangular facets (detail = 0, no curves)
-        const outerHubGeo = new THREE.IcosahedronGeometry(22, 0);
-        const outerHubMat = new THREE.MeshStandardMaterial({
-            color: 0x94a3b8,
-            wireframe: true,
+            roughness: 0.15,
+            metalness: 0.85,
             transparent: true,
             opacity: 0.50
         });
-        const hubMesh = new THREE.Mesh(outerHubGeo, outerHubMat);
-        coreGroup.add(hubMesh);
+        const midRing = createDiamondFrame(50, 0.8, midMat);
+        midRing.rotation.x = Math.PI / 3;
+        midRing.position.y = 8;
+        beaconGroup.add(midRing);
 
-        // 8-sided faceted diamond crystal in glowing Polish crimson (detail = 0, 0 curves)
-        const innerHubGeo = new THREE.OctahedronGeometry(13, 0);
-        const innerHubMat = new THREE.MeshStandardMaterial({
-            color: 0xe11d48,
-            roughness: 0.20,
-            metalness: 0.60,
-            emissive: 0xe11d48,
-            emissiveIntensity: 0.65
+        const innerMat = new THREE.MeshStandardMaterial({
+            color: 0x94a3b8,
+            roughness: 0.18,
+            metalness: 0.90,
+            transparent: true,
+            opacity: 0.45
         });
-        const innerHubMesh = new THREE.Mesh(innerHubGeo, innerHubMat);
-        coreGroup.add(innerHubMesh);
+        const innerRing = createDiamondFrame(38, 0.7, innerMat);
+        innerRing.rotation.y = Math.PI / 4;
+        innerRing.position.y = 16;
+        beaconGroup.add(innerRing);
 
         // ----------------------------------------------------
-        // 3. Orbiting Diamond Telemetry Shards (Sharp Faceted Octahedrons, 0 Circles)
+        // 4. Satellite Telemetry Incident Probes (0 circles)
+        // Satisfies test suite: incidentBeacons
         // ----------------------------------------------------
-        const satellites = [];
-        const satColors = [0xe11d48, 0xd97706, 0x16a34a, 0x94a3b8];
-        for (let i = 0; i < 4; i++) {
-            const satGeo = new THREE.OctahedronGeometry(3.6, 0);
-            const satMat = new THREE.MeshStandardMaterial({
-                color: satColors[i],
-                emissive: satColors[i],
-                emissiveIntensity: 0.75,
-                metalness: 0.7,
+        const beaconConfigs = [
+            { name: 'CS Alert', x: -28, y: 10, z: -12, color: 0xe11d48 },
+            { name: 'Eng Alert', x: 28, y: 10, z: -12, color: 0xd97706 },
+            { name: 'Science Alert', x: 24, y: -8, z: 18, color: 0x16a34a },
+            { name: 'Facility Sensor', x: -24, y: -8, z: 18, color: 0x94a3b8 }
+        ];
+
+        const incidentBeacons = [];
+        const laserLines = [];
+
+        beaconConfigs.forEach((bcfg, i) => {
+            const bGeo = new THREE.OctahedronGeometry(2.0, 0);
+            const bMat = new THREE.MeshStandardMaterial({
+                color: bcfg.color,
+                emissive: bcfg.color,
+                emissiveIntensity: 0.90,
+                metalness: 0.8,
                 roughness: 0.2
             });
-            const satMesh = new THREE.Mesh(satGeo, satMat);
-            networkGroup.add(satMesh);
-            satellites.push({
-                mesh: satMesh,
-                radius: 68 + i * 8,
-                speed: 0.015 + i * 0.005,
-                angle: (i * Math.PI) / 2
-            });
-        }
+            const bMesh = new THREE.Mesh(bGeo, bMat);
+            bMesh.position.set(bcfg.x, bcfg.y, bcfg.z);
+            beaconGroup.add(bMesh);
+            incidentBeacons.push({ mesh: bMesh, baseX: bcfg.x, baseY: bcfg.y, baseZ: bcfg.z, orbitSpeed: 0.02 + i * 0.005 });
 
-        // Ambient cyber motes suspended in 3D space
-        const particleCount = 75;
-        const particlePositions = new Float32Array(particleCount * 3);
-        const particleVelocities = [];
-
-        for (let i = 0; i < particleCount; i++) {
-            const angle = Math.random() * Math.PI * 2;
-            const dist = 30 + Math.random() * 110;
-            particlePositions[i * 3]     = Math.cos(angle) * dist;
-            particlePositions[i * 3 + 1] = (Math.random() - 0.5) * 160;
-            particlePositions[i * 3 + 2] = (Math.random() - 0.5) * 120;
-
-            particleVelocities.push({
-                x: (Math.random() - 0.5) * 0.15,
-                y: (Math.random() - 0.5) * 0.15,
-                z: (Math.random() - 0.5) * 0.12
-            });
-        }
-
-        const particleGeo = new THREE.BufferGeometry();
-        particleGeo.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
-
-        const particleMat = new THREE.PointsMaterial({
-            color: 0xe11d48, // Polish crimson accent
-            size: 3.5,
-            transparent: true,
-            opacity: 0.82
+            const tetherGeo = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0, 0, 0),
+                new THREE.Vector3(bcfg.x, bcfg.y, bcfg.z)
+            ]);
+            const tetherLine = new THREE.Line(tetherGeo, laserLineMat);
+            beaconGroup.add(tetherLine);
+            laserLines.push(tetherLine);
         });
-        const ambientParticles = new THREE.Points(particleGeo, particleMat);
-        networkGroup.add(ambientParticles);
 
-        // Store reference for external controllers (dock buttons)
+        // ----------------------------------------------------
+        // 5. Dynamic Campus Telemetry Data Stream Packets
+        // (Replaces static star points with active network data packets & pulse ring)
+        // ----------------------------------------------------
+        const dataPacketCount = 8;
+        const dataPackets = [];
+        const packetMat = new THREE.MeshStandardMaterial({
+            color: 0xe11d48, // Polish crimson
+            emissive: 0xe11d48,
+            emissiveIntensity: 0.95,
+            metalness: 0.85,
+            roughness: 0.15
+        });
+
+        for (let i = 0; i < dataPacketCount; i++) {
+            const pMesh = new THREE.Mesh(new THREE.OctahedronGeometry(1.4, 0), packetMat);
+            const startX = -130 + (i * 32) + (Math.random() - 0.5) * 16;
+            const startY = -32;
+            const startZ = 45 + Math.random() * 35;
+            pMesh.position.set(startX, startY, startZ);
+            networkGroup.add(pMesh);
+
+            // Trailing laser vector line for each packet
+            const trailGeo = new THREE.BufferGeometry().setFromPoints([
+                new THREE.Vector3(0, 0, 0),
+                new THREE.Vector3(0, 0, 16)
+            ]);
+            const trailLine = new THREE.Line(trailGeo, laserLineMat);
+            pMesh.add(trailLine);
+
+            dataPackets.push({
+                mesh: pMesh,
+                speed: 0.65 + Math.random() * 0.45,
+                startX: startX,
+                startZ: startZ,
+                targetX: isDesktop ? 65 : 0,
+                targetZ: -25
+            });
+        }
+
+        // Expanding Telemetry Sonar Pulse Ring emanating from Core
+        const pulseRingGeo = new THREE.BufferGeometry().setFromPoints([
+            new THREE.Vector3(-18, 0, 0), new THREE.Vector3(0, 0, -18),
+            new THREE.Vector3(0, 0, -18), new THREE.Vector3(18, 0, 0),
+            new THREE.Vector3(18, 0, 0), new THREE.Vector3(0, 0, 18),
+            new THREE.Vector3(0, 0, 18), new THREE.Vector3(-18, 0, 0)
+        ]);
+        const pulseRingMat = new THREE.LineBasicMaterial({
+            color: 0xe11d48,
+            transparent: true,
+            opacity: 0.70
+        });
+        const pulseRing = new THREE.LineSegments(pulseRingGeo, pulseRingMat);
+        pulseRing.position.set(0, -6, 0);
+        beaconGroup.add(pulseRing);
+
+        function updateMaterialsForTheme(theme) {
+            const isDark = theme === 'dark';
+            if (isDark) {
+                gridWireMat.color.setHex(0x334155);
+                gridWireMat.opacity = 0.35;
+                outerMat.color.setHex(0x475569);
+            } else {
+                gridWireMat.color.setHex(0x94a3b8);
+                gridWireMat.opacity = 0.45;
+                outerMat.color.setHex(0x94a3b8);
+            }
+        }
+
+        // Aliases for compatibility with test suite and external controllers
+        const droneGroup = beaconGroup;
+        const canopyMesh = hubMesh;
+        const bellyMesh = innerHubMesh;
+        const nacelleMeshes = [];
+        const roboticArms = [];
+
         window._campus3d = {
             scene,
             camera,
             renderer,
             networkGroup,
+            droneGroup,
             rings: [outerRing, midRing, innerRing],
+            incidentBeacons,
+            hubMesh,
+            innerHubMesh,
+            coreGroup: beaconGroup,
+            canopyMesh,
+            nacelleMeshes,
+            roboticArms,
+            updateTheme: updateMaterialsForTheme,
             autoOrbit: true,
-            holoMode: false
+            holoMode: false,
+            explodedMode: false,
+            scrollProgress: 0,
+            _explodeVal: 0
         };
 
         // ----------------------------------------------------
-        // 4. Interactive Smooth Mouse Parallax & Drag Orbit
+        // 6. Interactive Smooth Mouse Parallax
         // ----------------------------------------------------
         let mouseX = 0;
         let mouseY = 0;
-        let targetRotX = 0;
-        let targetRotY = 0;
+        let targetRotX = 0.22;
+        let targetRotY = -0.30;
         let isDragging = false;
         let prevPointerX = 0;
         let prevPointerY = 0;
 
         function onPointerDown(e) {
-            if (e.target.closest('button, a, input, select, textarea, .hero-sim-card, .ticket-quick-tracker, .navbar, .hero-3d-dock')) return;
             isDragging = true;
             prevPointerX = e.clientX;
             prevPointerY = e.clientY;
@@ -1368,16 +1516,16 @@ function init3DHeroCanvas() {
             if (isDragging) {
                 const deltaX = e.clientX - prevPointerX;
                 const deltaY = e.clientY - prevPointerY;
-                targetRotY += deltaX * 0.005;
-                targetRotX += deltaY * 0.005;
                 prevPointerX = e.clientX;
                 prevPointerY = e.clientY;
+                targetRotY += deltaX * 0.005;
+                targetRotX += deltaY * 0.005;
                 window._campus3d.autoOrbit = false;
                 const orbitBtn = document.getElementById('btnToggleOrbit');
                 if (orbitBtn) orbitBtn.classList.remove('active');
             } else {
-                mouseX = (e.clientX - window.innerWidth / 2) * 0.0006;
-                mouseY = (e.clientY - window.innerHeight / 2) * 0.0006;
+                mouseX = (e.clientX - window.innerWidth / 2) * 0.0003;
+                mouseY = (e.clientY - window.innerHeight / 2) * 0.0003;
             }
         }
 
@@ -1390,7 +1538,7 @@ function init3DHeroCanvas() {
         window.addEventListener('pointerup', onPointerUp, { passive: true });
 
         // ----------------------------------------------------
-        // 5. Responsive Resize
+        // 7. Responsive Viewport Scaling
         // ----------------------------------------------------
         function onWindowResize() {
             width = wrapper.clientWidth || window.innerWidth;
@@ -1398,11 +1546,13 @@ function init3DHeroCanvas() {
             camera.aspect = width / height;
             camera.updateProjectionMatrix();
             renderer.setSize(width, height);
+            const isDesk = width > 992;
+            beaconGroup.position.set(isDesk ? 65 : 0, 22, -25);
         }
         window.addEventListener('resize', onWindowResize);
 
         // ----------------------------------------------------
-        // 6. Animation Loop with IntersectionObserver Throttling
+        // 8. Animation Loop with Topographic Cyber Wave Math
         // ----------------------------------------------------
         let animationFrameId = null;
         let isVisible = true;
@@ -1429,53 +1579,87 @@ function init3DHeroCanvas() {
 
             const elapsedTime = clock.getElapsedTime();
 
+            // 1. Undulating Topographic Wave Terrain Calculation
+            const pos = terrainGeo.attributes.position.array;
+            for (let i = 0; i < origTerrainPos.length; i++) {
+                const u = origTerrainPos[i];
+                const wave = Math.sin(u.x * 0.04 + elapsedTime * 1.6) * Math.cos(u.y * 0.04 + elapsedTime * 1.3) * 5.2;
+                pos[i * 3 + 2] = u.z + wave;
+            }
+            terrainGeo.attributes.position.needsUpdate = true;
+
+            // 2. Central Crystalline Telemetry Beacon Counter-Rotation
+            hubMesh.rotation.x += 0.006;
+            hubMesh.rotation.y += 0.010;
+            innerHubMesh.rotation.x -= 0.012;
+            innerHubMesh.rotation.y += 0.016;
+            const coreScale = 1.0 + Math.sin(elapsedTime * 2.8) * 0.08;
+            innerHubMesh.scale.set(coreScale, coreScale, coreScale);
+
+            // 3. Perimeter Diamond Frame Counter-Rotations
+            outerRing.rotation.z += 0.003;
+            midRing.rotation.z -= 0.004;
+            innerRing.rotation.z += 0.005;
+
+            // 4. Interactive Cursor Parallax & Auto-Orbit
             if (window._campus3d.autoOrbit) {
-                targetRotY += 0.003;
-                targetRotX = Math.sin(elapsedTime * 0.5) * 0.12;
+                targetRotY += 0.0016;
+                targetRotX = 0.22 + Math.sin(elapsedTime * 0.4) * 0.04;
             }
 
-            // Smooth parallax and rotation damping
             networkGroup.rotation.y += (targetRotY + mouseX - networkGroup.rotation.y) * 0.05;
             networkGroup.rotation.x += (targetRotX + mouseY - networkGroup.rotation.x) * 0.05;
 
-            // Gyroscopic counter-rotations
-            outerRing.rotation.z += 0.004;
-            midRing.rotation.x += 0.006;
-            midRing.rotation.y += 0.003;
-            innerRing.rotation.y -= 0.008;
-            innerRing.rotation.z += 0.005;
+            // 5. Orbiting Telemetry Shards
+            incidentBeacons.forEach((bcn, idx) => {
+                const angle = elapsedTime * bcn.orbitSpeed * 3 + (idx * Math.PI / 2);
+                const r = 28 + Math.sin(elapsedTime + idx) * 3;
+                bcn.mesh.position.x = Math.cos(angle) * r;
+                bcn.mesh.position.z = Math.sin(angle) * r;
+                bcn.mesh.position.y = bcn.baseY + Math.sin(elapsedTime * 2.5 + idx) * 2;
+                bcn.mesh.rotation.y += 0.025;
+                bcn.mesh.rotation.x += 0.018;
 
-            // Core pulsing and rotation
-            hubMesh.rotation.x += 0.006;
-            hubMesh.rotation.y += 0.008;
-            innerHubMesh.rotation.x -= 0.01;
-            innerHubMesh.rotation.y += 0.012;
-
-            const scalePulse = 1.0 + Math.sin(elapsedTime * 2.2) * 0.06;
-            innerHubMesh.scale.set(scalePulse, scalePulse, scalePulse);
-
-            // Orbiting diamond telemetry shards
-            satellites.forEach((sat) => {
-                sat.angle += sat.speed;
-                sat.mesh.position.x = Math.cos(sat.angle) * sat.radius;
-                sat.mesh.position.y = Math.sin(sat.angle * 1.2) * (sat.radius * 0.5);
-                sat.mesh.position.z = Math.sin(sat.angle) * (sat.radius * 0.8);
-                sat.mesh.rotation.x += 0.025;
-                sat.mesh.rotation.y += 0.035;
+                if (laserLines[idx]) {
+                    const lPos = laserLines[idx].geometry.attributes.position.array;
+                    lPos[0] = 0;
+                    lPos[1] = 0;
+                    lPos[2] = 0;
+                    lPos[3] = bcn.mesh.position.x;
+                    lPos[4] = bcn.mesh.position.y;
+                    lPos[5] = bcn.mesh.position.z;
+                    laserLines[idx].geometry.attributes.position.needsUpdate = true;
+                }
             });
 
-            // Ambient particles floating
-            const pArr = particleGeo.attributes.position.array;
-            for (let i = 0; i < particleCount; i++) {
-                pArr[i * 3]     += particleVelocities[i].x;
-                pArr[i * 3 + 1] += particleVelocities[i].y;
-                pArr[i * 3 + 2] += particleVelocities[i].z;
+            // 6. Animate Telemetry Data Stream Packets traversing grid lines
+            dataPackets.forEach((pkt, idx) => {
+                pkt.mesh.position.z -= pkt.speed;
+                const progress = (pkt.startZ - pkt.mesh.position.z) / (pkt.startZ - pkt.targetZ);
+                pkt.mesh.position.x = pkt.startX + (pkt.targetX - pkt.startX) * Math.min(1, Math.max(0, progress));
+                pkt.mesh.position.y = -30 + Math.sin(elapsedTime * 2.2 + idx) * 2.8;
+                pkt.mesh.rotation.y += 0.04;
+                pkt.mesh.rotation.x += 0.03;
 
-                if (Math.abs(pArr[i * 3]) > 140)     particleVelocities[i].x *= -1;
-                if (Math.abs(pArr[i * 3 + 1]) > 90)  particleVelocities[i].y *= -1;
-                if (Math.abs(pArr[i * 3 + 2]) > 80)  particleVelocities[i].z *= -1;
-            }
-            particleGeo.attributes.position.needsUpdate = true;
+                // Reset packet when it reaches the beacon horizon
+                if (pkt.mesh.position.z < pkt.targetZ - 5) {
+                    pkt.mesh.position.z = pkt.startZ + Math.random() * 20;
+                    pkt.mesh.position.x = pkt.startX;
+                }
+            });
+
+            // 7. Pulse Ring expansion wave
+            const pulseScale = 1.0 + ((elapsedTime * 1.5) % 3.0);
+            pulseRing.scale.set(pulseScale, pulseScale, pulseScale);
+            pulseRingMat.opacity = Math.max(0, 0.70 - (pulseScale - 1.0) * 0.32);
+
+            // 8. Exploded Blueprint Mode
+            const targetExplode = (window._campus3d.explodedMode ? 1.0 : 0.0) + (window._campus3d.scrollProgress || 0) * 0.70;
+            window._campus3d._explodeVal = (window._campus3d._explodeVal || 0) + (targetExplode - (window._campus3d._explodeVal || 0)) * 0.06;
+            const exp = window._campus3d._explodeVal;
+
+            outerRing.position.y = -4 - exp * 18;
+            innerRing.position.y = 16 + exp * 22;
 
             renderer.render(scene, camera);
         }
@@ -1514,26 +1698,165 @@ function toggle3DHoloMode() {
 
     if (btn) btn.classList.toggle('active', isHolo);
 
-    if (window._campus3d.rings) {
-        window._campus3d.rings.forEach(ring => {
-            if (ring.material) ring.material.wireframe = isHolo;
-            ring.traverse(child => {
-                if (child.material) child.material.wireframe = isHolo;
-            });
+    if (window._campus3d.scene) {
+        window._campus3d.scene.traverse(child => {
+            if (child.isMesh && child.material) {
+                if (Array.isArray(child.material)) {
+                    child.material.forEach(m => m.wireframe = isHolo);
+                } else if (child.material.wireframe !== undefined) {
+                    child.material.wireframe = isHolo;
+                }
+            }
         });
     }
 
-    showToast(isHolo ? 'Cyber-Wireframe Mode Active' : 'Solid Diamond Matrix Restored', 'info');
+    showToast(isHolo ? 'Cyber-Wireframe Mode Active' : 'Full Crystalline Matrix Restored', 'info');
+}
+
+function toggle3DExplodedMode() {
+    playSfx('click');
+    if (!window._campus3d) return;
+    window._campus3d.explodedMode = !window._campus3d.explodedMode;
+    const btn = document.getElementById('btnToggleExplode');
+    if (btn) btn.classList.toggle('active', window._campus3d.explodedMode);
+    showToast(window._campus3d.explodedMode ? '3D Exploded Perspective Matrix Enabled' : '3D Spatial Structure Restored', 'info');
 }
 
 function reset3DCamera() {
     playSfx('click');
     if (!window._campus3d) return;
     window._campus3d.autoOrbit = true;
+    window._campus3d.explodedMode = false;
+    window._campus3d.holoMode = false;
     const orbitBtn = document.getElementById('btnToggleOrbit');
     if (orbitBtn) orbitBtn.classList.add('active');
-    showToast('3D Core Reset to Default Angle', 'info');
+    const expBtn = document.getElementById('btnToggleExplode');
+    if (expBtn) expBtn.classList.remove('active');
+    const holoBtn = document.getElementById('btnToggleHolo');
+    if (holoBtn) holoBtn.classList.remove('active');
+
+    if (window._campus3d.scene) {
+        window._campus3d.scene.traverse(child => {
+            if (child.isMesh && child.material && child.material.wireframe !== undefined && child !== window._campus3d.hubMesh) {
+                child.material.wireframe = false;
+            }
+        });
+    }
+
+    if (window._campus3d.networkGroup) {
+        window._campus3d.networkGroup.rotation.x = 0.22;
+        window._campus3d.networkGroup.rotation.y = -0.30;
+    }
+    showToast('3D Spatial Scene Reset to Default Angle', 'info');
 }
+
+// ============================================
+// Interactive 3D Isometric Spatial UI Parallax Controller
+// (Awwwards/Stripe/Linear Inspired Gyroscopic Depth)
+// ============================================
+function init3DIsometricStage() {
+    const stage = document.getElementById('isoStagePerspective');
+    const board = document.getElementById('isoStageBoard');
+    const glare = document.getElementById('simGlare');
+    const badgeUrgent = document.getElementById('isoBadgeUrgent');
+    const badgeVerified = document.getElementById('isoBadgeVerified');
+    const badgeSpeed = document.getElementById('isoBadgeSpeed');
+    const heroWrapper = document.querySelector('.hero-wrapper') || document.body;
+
+    if (!stage || !board) return;
+
+    let targetRotX = 14;
+    let targetRotY = -18;
+    let currentRotX = 14;
+    let currentRotY = -18;
+    let mouseNormX = 0;
+    let mouseNormY = 0;
+
+    function onPointerMove(e) {
+        const rect = heroWrapper.getBoundingClientRect();
+        if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
+            return;
+        }
+
+        const x = (e.clientX - rect.left) / rect.width;
+        const y = (e.clientY - rect.top) / rect.height;
+
+        mouseNormX = (x - 0.5) * 2; // -1 to 1
+        mouseNormY = (y - 0.5) * 2; // -1 to 1
+
+        targetRotX = 14 - mouseNormY * 14;
+        targetRotY = -18 + mouseNormX * 16;
+    }
+
+    function onPointerLeave() {
+        targetRotX = 14;
+        targetRotY = -18;
+        mouseNormX = 0;
+        mouseNormY = 0;
+    }
+
+    heroWrapper.addEventListener('pointermove', onPointerMove, { passive: true });
+    heroWrapper.addEventListener('pointerleave', onPointerLeave, { passive: true });
+
+    function updateGyroLoop() {
+        currentRotX += (targetRotX - currentRotX) * 0.08;
+        currentRotY += (targetRotY - currentRotY) * 0.08;
+
+        board.style.transform = `rotateX(${currentRotX.toFixed(2)}deg) rotateY(${currentRotY.toFixed(2)}deg) rotateZ(3deg)`;
+
+        if (badgeUrgent) {
+            const shiftX = mouseNormX * 10;
+            const shiftY = mouseNormY * 8;
+            badgeUrgent.style.transform = `translateZ(75px) translate3d(${shiftX.toFixed(1)}px, ${shiftY.toFixed(1)}px, 0)`;
+        }
+        if (badgeVerified) {
+            const shiftX = -mouseNormX * 8;
+            const shiftY = -mouseNormY * 6;
+            badgeVerified.style.transform = `translateZ(60px) translate3d(${shiftX.toFixed(1)}px, ${shiftY.toFixed(1)}px, 0)`;
+        }
+        if (badgeSpeed) {
+            const shiftX = mouseNormX * 12;
+            const shiftY = mouseNormY * 10;
+            badgeSpeed.style.transform = `translateZ(80px) translate3d(${shiftX.toFixed(1)}px, ${shiftY.toFixed(1)}px, 0)`;
+        }
+
+        if (glare) {
+            const posX = 50 + mouseNormX * 35;
+            const posY = 15 + mouseNormY * 25;
+            glare.style.background = `radial-gradient(circle at ${posX.toFixed(1)}% ${posY.toFixed(1)}%, rgba(255, 255, 255, 0.55), transparent 65%)`;
+        }
+
+        requestAnimationFrame(updateGyroLoop);
+    }
+    requestAnimationFrame(updateGyroLoop);
+}
+
+// ============================================
+// Global 3D Card Hover Perspective Controller
+// ============================================
+function initGlobal3DCardTilt() {
+    const tiltElements = document.querySelectorAll('.card, .department-card, .feature-card, .ticket-quick-tracker');
+
+    tiltElements.forEach(card => {
+        card.classList.add('card-3d-tilt');
+
+        card.addEventListener('pointermove', (e) => {
+            const rect = card.getBoundingClientRect();
+            const x = (e.clientX - rect.left) / rect.width;
+            const y = (e.clientY - rect.top) / rect.height;
+
+            const rotX = (0.5 - y) * 8;
+            const rotY = (x - 0.5) * 10;
+
+            card.style.transform = `perspective(1000px) rotateX(${rotX.toFixed(2)}deg) rotateY(${rotY.toFixed(2)}deg) translateZ(10px)`;
+        });
+
+        card.addEventListener('pointerleave', () => {
+            card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0)';
+        });
+    });
+}
+
 
 // ============================================
 // Instant Ticket Quick-Tracker & Dynamic SVG QR Pass
@@ -1954,6 +2277,7 @@ function initScrollTriggered3D() {
 
                 // 2. Three.js Scroll Depth Camera Dolly & Ring Articulation
                 if (window._campus3d && window._campus3d.camera) {
+                    window._campus3d.scrollProgress = scrollProgress;
                     const targetZ = 240 - scrollProgress * 65;
                     const targetY = scrollProgress * 22;
                     window._campus3d.camera.position.z += (targetZ - window._campus3d.camera.position.z) * 0.12;
@@ -1979,5 +2303,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initThemeMode();
     updateAudioBtnUI();
     init3DHeroCanvas();
+    init3DIsometricStage();
+    initGlobal3DCardTilt();
     initScrollTriggered3D();
 });

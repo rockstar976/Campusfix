@@ -59,11 +59,23 @@
             </div>
 
             <!-- Complaints List -->
-            <div class="card">
-                <div class="card-header">
-                    <h3><i class="fa-solid fa-list"></i> My Complaints</h3>
+            <div class="card" style="padding:0; overflow:hidden;">
+                <div class="card-header" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; padding:1.25rem 1.25rem 1rem;">
+                    <h3 style="margin:0;"><i class="fa-solid fa-list" style="color:var(--color-accent);"></i> My Complaints</h3>
+                    
+                    <div class="dashboard-tabs" id="complaintTabs">
+                        <button class="dash-tab active" onclick="filterStudentComplaints('all', this)">All</button>
+                        <button class="dash-tab" onclick="filterStudentComplaints('active', this)">Active</button>
+                        <button class="dash-tab" onclick="filterStudentComplaints('resolved', this)">Resolved</button>
+                    </div>
                 </div>
-                <div class="complaint-list" id="complaintsList">
+                
+                <div style="padding:0.6rem 1.25rem; border-bottom:1px solid var(--color-border); background:var(--color-bg-secondary);">
+                    <input type="text" id="studentSearchInput" class="form-control" style="font-size:0.85rem; padding:8px 14px;" 
+                           placeholder="Filter complaints by title, category, location, or ID..." oninput="onStudentSearch(this.value)">
+                </div>
+
+                <div class="complaint-list" id="complaintsList" style="padding:1.25rem;">
                     <div class="spinner"></div>
                 </div>
             </div>

@@ -40,6 +40,8 @@ function sanitize($data) {
  */
 function jsonResponse($data, $statusCode = 200) {
     header('Content-Type: application/json');
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
     http_response_code($statusCode);
     echo json_encode($data);
     exit;

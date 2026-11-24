@@ -28,6 +28,7 @@ __pycache__/
 *$py.class
 
 # IDE / Editor files
+.gemini/
 .vscode/
 .idea/
 *.swp

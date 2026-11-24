@@ -98,12 +98,29 @@
 
             if (result.success) {
                 showAlert('registerAlert', 'Account created! Redirecting to login...', 'success');
-                setTimeout(() => redirectTo('login.html'), 1500);
+                setTimeout(() => redirectTo('login.html', true), 1500);
             } else {
                 showAlert('registerAlert', result.message, 'error');
                 setLoading(btn, false);
             }
         }
+
+        // If already logged in, redirect unless ?switch=1 is in URL
+        async function checkAndRedirectIfLoggedIn() {
+            const params = new URLSearchParams(window.location.search);
+            if (!params.get('switch')) {
+                const user = await checkAuth();
+                if (user) {
+                    const isAdmin = ['super_admin', 'department_admin', 'staff'].includes(user.role);
+                    redirectTo(isAdmin ? 'admin.html' : 'dashboard.html', true);
+                }
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', checkAndRedirectIfLoggedIn);
+        window.addEventListener('pageshow', (event) => {
+            checkAndRedirectIfLoggedIn();
+        });
     </script>
 </body>
 </html>

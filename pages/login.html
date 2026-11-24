@@ -72,19 +72,36 @@
             const btn = document.getElementById('loginBtn');
             setLoading(btn, true);
 
+            const emailInput = document.getElementById('email').value.trim();
+            const passwordInput = document.getElementById('password').value;
+
             const data = {
-                email: document.getElementById('email').value,
-                password: document.getElementById('password').value
+                email: emailInput,
+                password: passwordInput
             };
 
             const result = await api.post('auth.php?action=login', data);
 
             if (result.success) {
                 showAlert('loginAlert', 'Login successful! Redirecting...', 'success');
+                // Synchronize mock & session user immediately
+                if (result.user) {
+                    LiveServerMock.setCurrentUser(result.user);
+                    localStorage.setItem('cf_session_user_id', String(result.user.id));
+                } else {
+                    let role = result.role || (emailInput.includes('admin') ? 'super_admin' : (emailInput.includes('staff') ? 'staff' : 'student'));
+                    LiveServerMock.setCurrentUser({
+                        id: role === 'super_admin' ? 1 : (role === 'staff' ? 2 : 3),
+                        name: role === 'super_admin' ? 'Super Admin' : (role === 'staff' ? 'Maintenance Staff' : 'Student User'),
+                        email: emailInput,
+                        role: role
+                    });
+                }
                 const isAdmin = ['super_admin', 'department_admin', 'staff'].includes(result.role);
                 setTimeout(() => {
-                    redirectTo(isAdmin ? 'admin.html' : 'dashboard.html');
-                }, 800);
+                    // Use replace so login page is removed from history stack
+                    redirectTo(isAdmin ? 'admin.html' : 'dashboard.html', true);
+                }, 400);
             } else {
                 showAlert('loginAlert', result.message, 'error');
                 setLoading(btn, false);
@@ -99,15 +116,22 @@
         }
 
         // If already logged in, redirect unless ?switch=1 is in URL
-        document.addEventListener('DOMContentLoaded', async () => {
+        async function checkAndRedirectIfLoggedIn() {
             const params = new URLSearchParams(window.location.search);
             if (!params.get('switch')) {
                 const user = await checkAuth();
                 if (user) {
                     const isAdmin = ['super_admin', 'department_admin', 'staff'].includes(user.role);
-                    redirectTo(isAdmin ? 'admin.html' : 'dashboard.html');
+                    // Use replace so user does not loop on back navigation
+                    redirectTo(isAdmin ? 'admin.html' : 'dashboard.html', true);
                 }
             }
+        }
+
+        document.addEventListener('DOMContentLoaded', checkAndRedirectIfLoggedIn);
+        window.addEventListener('pageshow', (event) => {
+            // Also check on bfcache restore
+            checkAndRedirectIfLoggedIn();
         });
     </script>
 </body>

@@ -94,7 +94,19 @@ function loginUser($email, $password) {
     $_SESSION['user_role'] = $user['role'];
     $_SESSION['institution_id'] = $user['institution_id'];
     
-    return ['success' => true, 'message' => 'Login successful!', 'role' => $user['role']];
+    return [
+        'success' => true, 
+        'message' => 'Login successful!', 
+        'role' => $user['role'],
+        'session_user_id' => (int)$user['id'],
+        'user' => [
+            'id' => (int)$user['id'],
+            'name' => $user['name'],
+            'email' => $user['email'],
+            'role' => $user['role'],
+            'student_id' => $user['student_id'] ?? ''
+        ]
+    ];
 }
 
 /**
@@ -122,7 +134,15 @@ function isAdmin() {
  * Logout User: Session ko destroy karke user ko log out karta hai
  */
 function logoutUser() {
+    $_SESSION = [];
     session_unset();
+    if (ini_get("session.use_cookies")) {
+        $params = session_get_cookie_params();
+        setcookie(session_name(), '', time() - 42000,
+            $params["path"], $params["domain"],
+            $params["secure"], $params["httponly"]
+        );
+    }
     session_destroy();
 }
 
